@@ -1,0 +1,25 @@
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+
+# Electron builder cache
+out/
+
+# VSCode
+.vscode/
+
+# Env files
+.env
+.env.local
+
+# Webpack dev server artifacts
+*.cache

@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Monapad</title>
+    <style>
+      @font-face {
+        font-family: "Figtree";
+        src: url("./font/Figtree-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      @font-face {
+        font-family: "Figtree";
+        src: url("./font/Figtree-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+      }
+      :root {
+        --color1: #121214; /* editor, button */
+        --color2: #1a1a1e; /* toolbar, statusbar, menu, modal */
+        --color3: #242429; /* button hover */
+        --btnHover: #666; /* modal button hover */
+        --red: #e81123; /* window close */
+        --btnBlue: #306ea0; /* blue button */
+        --txtBlue: #569cd6; /* header text, blue button hover */
+      }
+      body {
+        margin: 0;
+        font-family: "figtree", Meiryo, sans-serif;
+        background: var(--color1);
+        color: #fff;
+        overflow: hidden;
+      }
+      button {
+        font-family: inherit;
+      }
+      #menu button,
+      #recent-menu button,
+      #theme-menu button,
+      #custom-context-menu button,
+      #tab-context-menu button {
+        width: 100%;
+        height: 28px;
+        font-size: 14px;
+        line-height: 28px;
+      }
+      #container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+      #toolbar {
+        display: flex;
+        align-items: center;
+        background: var(--color2);
+        height: 35px;
+        -webkit-app-region: drag;
+      }
+      #menu-button {
+        -webkit-app-region: no-drag;
+        background: var(--color2);
+        color: white;
+        border: none;
+        font-size: 11px;
+        letter-spacing: 0.2em;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 100%;
+      }
+      #menu-button:hover {
+        background-color: var(--color3);
+      }
+      #menu {
+        position: absolute;
+        top: 40px;
+        left: 0px;
+        background: var(--color2);
+        display: none;
+        z-index: 9998;
+        width: 260px;
+        padding: 5px 0;
+        max-height: calc(100vh - 80px); /* 画面の縦幅を超えないようにする（メニューボタン位置に応じて調整） */
+        overflow-y: auto;
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        user-select: none;
+      }
+      #menu button {
+        position: relative;
+        background: none;
+        color: white;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        padding: 0 10px;
+      }
+      #menu button:hover {
+        background-color: var(--color3);
+      }
+      #menu .hr,
+      #recent-menu .hr,
+      #custom-context-menu .hr,
+      #tab-context-menu .hr {
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.1);
+        margin: 5px 10px;
+        flex-shrink: 0;
+      }
+      #menu button .label {
+        display: inline-block;
+        width: 57%;
+      }
+      #menu button .shortcut {
+        color: rgba(255, 255, 255, 0.25);
+      }
+      #menu::-webkit-scrollbar,
+      #custom-context-menu::-webkit-scrollbar,
+      #font-layout-menu::-webkit-scrollbar,
+      #about-main::-webkit-scrollbar {
+        width: 8px;
+      }
+      #font-family-select::-webkit-scrollbar {
+        width: 10px;
+      }
+      #menu::-webkit-scrollbar-track,
+      #custom-context-menu::-webkit-scrollbar-track,
+      #font-family-select::-webkit-scrollbar-track,
+      #font-layout-menu::-webkit-scrollbar-track,
+      #about-main::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #menu::-webkit-scrollbar-thumb,
+      #custom-context-menu::-webkit-scrollbar-thumb,
+      #font-family-select::-webkit-scrollbar-thumb,
+      #font-layout-menu::-webkit-scrollbar-thumb,
+      #about-main::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      #menu::-webkit-scrollbar-button,
+      #menu::-webkit-scrollbar-corner,
+      #custom-context-menu::-webkit-scrollbar-button,
+      #custom-context-menu::-webkit-scrollbar-corner,
+      #font-family-select::-webkit-scrollbar-button,
+      #font-family-select::-webkit-scrollbar-corner,
+      #font-layout-menu::-webkit-scrollbar-button,
+      #font-layout-menu::-webkit-scrollbar-corner,
+      #about-main::-webkit-scrollbar-button,
+      #about-main::-webkit-scrollbar-corner {
+        display: none;
+      }
+      #theme-menu {
+        position: absolute;
+        left: 260px;
+        margin-left: 5px;
+        background: var(--color2);
+        display: none;
+        z-index: 9998;
+        width: 120px;
+        padding: 5px 0;
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        user-select: none;
+      }
+
+      #theme-menu button {
+        position: relative;
+        background: none;
+        color: white;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        padding: 0 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      #theme-menu button:hover {
+        background-color: var(--color3);
+      }
+
+      .checkmark {
+        display: none;
+      }
+
+      #theme-menu button.active .checkmark {
+        display: inline-block;
+      }
+
+      #recent-menu {
+        position: absolute;
+        left: 260px;
+        margin-left: 5px;
+        background: var(--color2);
+        display: none;
+        z-index: 9998;
+        padding: 5px 0;
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        max-width: calc(100vw - 260px - 5px - 2px);
+        min-width: 120px;
+        user-select: none;
+      }
+
+      #recent-menu button {
+        position: relative;
+        background: none;
+        color: white;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        padding: 0 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 100%;
+        overflow: hidden;
+      }
+      #recent-menu button span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #recent-menu button:hover {
+        background-color: var(--color3);
+      }
+
+      #toggleStatusBar,
+      #openRecent,
+      #changeTheme,
+      #word-wrap,
+      #toggle-markdown {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border: none;
+      }
+      #tabs {
+        max-width: calc(100vw - 230px);
+        height: 100%;
+        display: flex;
+        flex-grow: 1;
+        overflow: hidden;
+        align-items: center;
+        user-select: none;
+      }
+      .tab {
+        -webkit-app-region: no-drag;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex: 1 1 0;
+        max-width: 200px;
+        min-width: 0;
+        height: 100%;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        background: var(--color2);
+        padding: 0 10px;
+        font-size: 14px;
+        position: relative;
+        color: rgba(255, 255, 255, 0.5);
+        cursor: default;
+      }
+      .tab:not(.active):not(.prev-active)::before {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 20%;
+        height: 60%;
+        width: 1px;
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+      .tab:first-of-type:not(.active)::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 20%;
+        height: 60%;
+        width: 1px;
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+      .tab.active {
+        background: var(--color1);
+        border-right: none;
+        color: rgba(255, 255, 255, 1);
+      }
+      .tab:hover {
+        color: rgba(255, 255, 255, 1);
+      }
+      .dragging .tab:not(.active):hover {
+        color: rgba(255, 255, 255, 0.5) !important;
+        cursor: default;
+      }
+      .tab .close {
+        opacity: 0;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .tab:hover .close {
+        opacity: 1;
+      }
+
+      .tab.active .close {
+        opacity: 1;
+      }
+
+      .tab .close.show-unsaved {
+        opacity: 1;
+      }
+
+      .tab .close .close-svg {
+        display: none;
+        line-height: 0;
+      }
+
+      .tab:hover .close .close-svg {
+        display: block;
+      }
+
+      .tab.active .close .close-svg {
+        display: block;
+      }
+
+      .tab .close .unsaved-dot {
+        display: none;
+        width: 6px;
+        height: 6px;
+        background-color: white;
+        border-radius: 50%;
+        opacity: 0.5;
+        margin: 2px;
+      }
+
+      .tab .close.show-unsaved .unsaved-dot {
+        display: block;
+      }
+
+      .tab .close.show-unsaved .close-svg {
+        display: none;
+      }
+
+      .tab:hover .close.show-unsaved .close-svg {
+        display: block;
+      }
+
+      .tab:hover .close.show-unsaved .unsaved-dot {
+        display: none;
+      }
+
+      .tab span.name {
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: flex;
+        max-width: calc(100% - 15px);
+      }
+      #add-tab {
+        -webkit-app-region: no-drag;
+        background: var(--color2);
+        color: white;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        order: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        min-width: 40px;
+        height: 100%;
+      }
+      #add-tab:hover {
+        background-color: var(--color3);
+      }
+      #window-controls {
+        display: flex;
+        margin-left: auto; /* 他要素を左に寄せ、これを右端に配置 */
+        height: 100%;
+        -webkit-app-region: no-drag;
+      }
+
+      .window-button {
+        width: 40px;
+        height: 100%;
+        background: var(--color2);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .window-button svg {
+        width: 11px;
+        height: 11px;
+      }
+      #min-button:hover,
+      #max-button:hover {
+        background-color: var(--color3);
+      }
+      #close-button:hover {
+        background-color: var(--red);
+      }
+
+      button:focus,
+      .tab:focus,
+      #editor:focus {
+        outline: none;
+      }
+      #editor {
+        flex: 1;
+        box-sizing: border-box;
+        background: var(--color1);
+        color: white;
+        border: none;
+        resize: none;
+        white-space: pre-wrap;
+      }
+      #status-bar {
+        height: 25px;
+        background: var(--color2);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 10px;
+        box-sizing: border-box;
+        color: rgba(255, 255, 255, 0.5);
+        user-select: none;
+        min-width: 0;
+      }
+      #status-left {
+        line-height: 25px;
+        flex: 1;
+        min-width: 0;
+        max-width: calc(100vw - 350px);
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      #status-right {
+        line-height: 25px;
+        display: flex;
+        flex-shrink: 0;
+      }
+      #status-right span {
+        margin-left: 30px;
+        white-space: nowrap;
+      }
+      #zoom-level {
+        width: 30px;
+        text-align: right;
+      }
+
+      .heading {
+        color: var(--txtBlue) !important;
+      }
+      .gray-text {
+        color: gray !important;
+      }
+      .monaco-editor .unexpected-closing-bracket {
+        color: rgba(255, 255, 255, 1) !important;
+      }
+      .monaco-editor .line-numbers {
+        font-family: "Consolas", "Courier New", monospace !important;
+        opacity: 0.5 !important;
+      }
+      #file-saved,
+      #file-opened {
+        position: fixed;
+        left: 50%;
+        bottom: 15%;
+        transform: translate(-50%, 20px);
+        background-color: var(--color2);
+        color: white;
+        padding: 10px 20px;
+        font-size: 14px;
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        z-index: 9997;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+      #file-saved.show,
+      #file-opened.show {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+      #confirm-save-background {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        align-items: center;
+        justify-content: center;
+        pointer-events: all;
+        z-index: 10000;
+      }
+      #confirm-save,
+      #confirm-save-window {
+        color: white;
+        padding: 20px;
+        background-color: var(--color1);
+        text-align: center;
+        min-width: min(100vw, 250px);
+        max-width: 400px;
+        height: auto;
+        min-height: 80px;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        border: solid 1px rgba(255, 255, 255, 0.1);
+      }
+
+      #confirm-save p,
+      #confirm-save-window p {
+        margin-block-start: 0;
+        margin-block-end: 0;
+        margin-bottom: 15px;
+        font-size: 16px;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        word-break: break-word;
+      }
+
+      #confirm-save .confirm-buttons {
+        display: flex;
+        justify-content: space-between;
+        width: 250px;
+      }
+      #confirm-save-window .confirm-buttons {
+        display: flex;
+        justify-content: space-between;
+        width: 320px;
+      }
+
+      #confirm-save .confirm-buttons button,
+      #confirm-save-window .confirm-buttons button {
+        display: flex;
+        padding: 8px 16px;
+        background-color: var(--color3);
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      #confirm-save-window .confirm-buttons #confirm-save-all {
+        background-color: var(--btnBlue);
+      }
+      #confirm-save-window .confirm-buttons #confirm-save-all:hover {
+        background-color: var(--txtBlue);
+      }
+
+      #confirm-save .confirm-buttons button:hover,
+      #confirm-save-window .confirm-buttons button:hover,
+      #about button:hover {
+        background-color: var(--btnHover);
+      }
+
+      #about {
+        display: none;
+        flex-direction: column;
+        padding: 20px;
+        background-color: var(--color1);
+        width: 320px;
+        max-height: calc(100vh - 40px);
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        font-size: 14px;
+        user-select: none;
+      }
+      #about-main {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+      }
+      #about a {
+        color: var(--txtBlue);
+      }
+      #about-footer {
+        display: flex;
+        justify-content: flex-end;
+      }
+      #about button {
+        display: flex;
+        padding: 8px 16px;
+        background-color: var(--color3);
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-top: 15px;
+      }
+
+      #custom-context-menu.menu {
+        overflow-y: auto;
+        max-height: calc(100vh - 12.5px - 35px);
+      }
+      #custom-context-menu.menu,
+      #tab-context-menu.menu {
+        position: absolute;
+        background: var(--color2);
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        padding: 5px 0;
+        z-index: 9999;
+        display: none;
+        flex-direction: column;
+        width: 220px;
+        user-select: none;
+      }
+      #custom-context-menu button,
+      #tab-context-menu button {
+        position: relative;
+        background: none;
+        color: white;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        padding: 0 10px;
+        display: flex;
+      }
+      #custom-context-menu button:hover,
+      #tab-context-menu button:hover {
+        background-color: var(--color3);
+      }
+      #custom-context-menu button .label {
+        display: inline-block;
+        width: 50%;
+      }
+      #tab-context-menu button .label {
+        display: inline-block;
+        width: 70%;
+      }
+      #custom-context-menu button .shortcut,
+      #tab-context-menu button .shortcut {
+        color: rgba(255, 255, 255, 0.25);
+      }
+      #custom-context-menu button svg {
+        display: inline-block;
+      }
+
+      #font-layout-menu {
+        position: absolute;
+        background: var(--color2);
+        z-index: 9996;
+        height: calc(100vh - 35px - 25px);
+        width: 260px;
+        top: 35px;
+        right: 0px;
+        user-select: none;
+        padding: 10px 0;
+        box-sizing: border-box;
+        display: none;
+        overflow-y: auto;
+      }
+      #font-layout-menu h1 {
+        font-weight: 400;
+        font-size: 20px;
+        margin: 0;
+        padding: 0 20px;
+      }
+      #font-layout-menu .hr {
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.1);
+        margin: 10px 20px 5px 20px;
+        flex-shrink: 0;
+      }
+      #font-layout-menu button {
+        position: relative;
+        justify-content: space-between;
+        display: flex;
+        align-items: center;
+        background: none;
+        color: white;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        font-size: 14px;
+        width: 100%;
+        height: 28px;
+        line-height: 28px;
+        padding: 0 20px;
+      }
+      #font-layout-menu button:hover {
+        background-color: var(--color3);
+      }
+      #font-layout-menu .row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        height: 28px;
+        line-height: 28px;
+        margin-bottom: 5px;
+      }
+
+      #font-layout-menu .label {
+        color: white;
+        user-select: none;
+      }
+
+      #font-layout-menu .control {
+        display: flex;
+        align-items: center;
+      }
+      #size-decrease,
+      #size-increase {
+        cursor: pointer;
+        width: 23px;
+        height: 23px;
+        margin: 0 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #size-decrease:hover,
+      #size-increase:hover {
+        background-color: var(--color3);
+      }
+      #font-family-select,
+      #font-style-select {
+        all: unset;
+        height: 28px;
+        width: 120px;
+        background: var(--color2);
+        border: solid 1px rgba(255, 255, 255, 0.1);
+        color: white;
+        font: inherit;
+        padding-right: 30px;
+        padding-left: 5px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        cursor: pointer;
+      }
+      #font-select-wrapper {
+        position: relative;
+      }
+      #font-select-wrapper::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+        top: 12px;
+        right: 8px;
+        width: 14px;
+        height: 7px;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23fff" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
+          no-repeat center;
+        background-size: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div id="toolbar">
+        <!-- top left menu -->
+        <button id="menu-button" aria-label="Menu">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.16 7.2" width="16" height="8">
+            <line
+              x1="0.64"
+              y1="0.5"
+              x2="14.66"
+              y2="0.5"
+              stroke="#fff"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+            <line
+              x1="0.5"
+              y1="6.7"
+              x2="7.65"
+              y2="6.7"
+              stroke="#fff"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+        </button>
+        <div id="menu">
+          <button id="newTabBtn">
+            <span class="label">New</span>
+            <span class="shortcut">Ctrl + T</span>
+          </button>
+          <button id="newWindowBtn">
+            <span class="label">New Window</span>
+            <span class="shortcut">Ctrl + N</span>
+          </button>
+          <button id="openFileBtn">
+            <span class="label">Open</span>
+            <span class="shortcut">Ctrl + O</span>
+          </button>
+          <button id="openRecent">
+            <span class="btn-text">Open Recent</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 5.65 9.77"
+              width="7.8"
+              height="13"
+              style="margin-left: 6px; vertical-align: middle"
+            >
+              <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
+            </svg>
+          </button>
+          <button id="saveFileBtn">
+            <span class="label">Save</span>
+            <span class="shortcut">Ctrl + S</span>
+          </button>
+          <button id="saveAsFileBtn">
+            <span class="label">Save As</span>
+            <span class="shortcut">Ctrl + Shift + S</span>
+          </button>
+          <div class="hr"></div>
+          <button id="triggerFindBtn">
+            <span class="label">Find</span>
+            <span class="shortcut">Ctrl + F</span>
+          </button>
+          <button id="triggerReplaceBtn">
+            <span class="label">Replace</span>
+            <span class="shortcut">Ctrl + H</span>
+          </button>
+          <div class="hr"></div>
+          <button id="print-button">Print</button>
+          <button id="font-layout">Font & Layout</button>
+          <button id="changeTheme">
+            <span class="btn-text">Theme</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 5.65 9.77"
+              width="7.8"
+              height="13"
+              style="margin-left: 6px; vertical-align: middle"
+            >
+              <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
+            </svg>
+          </button>
+          <button id="toggleStatusBar">
+            <span class="btn-text">Status Bar</span>
+            <svg
+              class="checkmark"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 10.23 7.15"
+              style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
+            >
+              <polyline
+                points=".5 3.58 3.58 6.65 9.73 .5"
+                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+              />
+            </svg>
+          </button>
+          <div class="hr"></div>
+          <button id="aboutBtn">About</button>
+        </div>
+        <div id="recent-menu"></div>
+        <div id="theme-menu">
+          <button data-theme="onyx">
+            Onyx
+            <svg
+              class="checkmark"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 10.23 7.15"
+              style="width: 13px; height: 13px; stroke: #fff; fill: none"
+            >
+              <polyline
+                points=".5 3.58 3.58 6.65 9.73 .5"
+                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+              />
+            </svg>
+          </button>
+          <button data-theme="dark">
+            Dark
+            <svg
+              class="checkmark"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 10.23 7.15"
+              style="width: 13px; height: 13px; stroke: #fff; fill: none"
+            >
+              <polyline
+                points=".5 3.58 3.58 6.65 9.73 .5"
+                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+              />
+            </svg>
+          </button>
+          <button data-theme="ash">
+            Ash
+            <svg
+              class="checkmark"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 10.23 7.15"
+              style="width: 13px; height: 13px; stroke: #fff; fill: none"
+            >
+              <polyline
+                points=".5 3.58 3.58 6.65 9.73 .5"
+                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div id="tabs">
+          <button id="add-tab" aria-label="Add Tab">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.95 11.95" width="13" height="13">
+              <line
+                x1="5.97"
+                y1="11.45"
+                x2="5.97"
+                y2=".5"
+                fill="none"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-miterlimit="10"
+              />
+              <line
+                x1="11.45"
+                y1="5.97"
+                x2=".5"
+                y2="5.97"
+                fill="none"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-miterlimit="10"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <!-- window controls -->
+        <div id="window-controls">
+          <button class="window-button" id="min-button" aria-label="Minimize">
+            <svg viewBox="0 0 12.47 1">
+              <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
+            </svg>
+          </button>
+          <button class="window-button" id="max-button" aria-label="Maximize">
+            <svg viewBox="0 0 12.47 12.47">
+              <rect x=".5" y=".5" width="11.47" height="11.47" stroke="#fff" fill="none" />
+            </svg>
+          </button>
+          <button class="window-button" id="close-button" aria-label="Close">
+            <svg viewBox="0 0 12.47 12.47">
+              <line x1="11.97" y1=".5" x2=".5" y2="11.97" stroke="#fff" stroke-linecap="round" fill="none" />
+              <line x1=".5" y1=".5" x2="11.97" y2="11.97" stroke="#fff" stroke-linecap="round" fill="none" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- editor -->
+      <div id="editor"></div>
+
+      <!-- status bar -->
+      <div id="status-bar" style="display: none">
+        <div id="status-left"></div>
+        <div id="status-right">
+          <span id="line-col"></span>
+          <span id="zoom-level"></span>
+          <span id="line-ending"></span>
+          <span id="encoding"></span>
+        </div>
+      </div>
+
+      <!-- messages -->
+      <div id="file-saved">Saved</div>
+      <div id="file-opened">File already opened!</div>
+
+      <!-- editor context menu -->
+      <div id="custom-context-menu" style="display: none; position: absolute" class="menu">
+        <button data-action="cut">
+          <span class="label">Cut</span>
+          <span class="shortcut">Ctrl + X</span>
+        </button>
+        <button data-action="copy">
+          <span class="label">Copy</span>
+          <span class="shortcut">Ctrl + C</span>
+        </button>
+        <button data-action="paste">
+          <span class="label">Paste</span>
+          <span class="shortcut">Ctrl + V</span>
+        </button>
+        <button data-action="undo">
+          <span class="label">Undo</span>
+          <span class="shortcut">Ctrl + Z</span>
+        </button>
+        <button data-action="redo">
+          <span class="label">Redo</span>
+          <span class="shortcut">Ctrl + Shift + Z</span>
+        </button>
+        <button data-action="selectAll">
+          <span class="label">Select All</span>
+          <span class="shortcut">Ctrl + A</span>
+        </button>
+        <div class="hr"></div>
+        <button data-action="wordWrap" id="word-wrap">
+          Word Wrap
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="display: inline-block; width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button data-action="toggleMarkdown" id="toggle-markdown">
+          Markdown Mode
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <!-- tab context menu -->
+      <div id="tab-context-menu" style="display: none; position: absolute" class="menu">
+        <button data-action="close">
+          <span class="label">Close</span>
+          <span class="shortcut">Ctrl + W</span>
+        </button>
+        <button data-action="closeOthers">
+          <span class="label">Close Others</span>
+        </button>
+        <button data-action="closeToRight">
+          <span class="label">Close to the Right</span>
+        </button>
+        <button data-action="closeSaved">
+          <span class="label">Close Saved</span>
+        </button>
+        <div class="hr"></div>
+        <button data-action="copyPath">
+          <span class="label">Copy Path</span>
+        </button>
+        <button data-action="openPath">
+          <span class="label">Open Path</span>
+        </button>
+      </div>
+
+      <!-- font & layout -->
+      <div id="font-layout-menu">
+        <!-- Font -->
+        <h1>Font</h1>
+        <div class="hr"></div>
+        <div class="row">
+          <div class="label">Size</div>
+          <div class="control">
+            <div id="size-decrease">
+              <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
+                <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
+              </svg>
+            </div>
+            <span
+              id="font-size-value"
+              style="color: #fff; user-select: none; min-width: 25px; display: inline-block; text-align: center"
+            ></span>
+            <div id="size-increase">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 11.95 11.95"
+                style="vertical-align: middle; width: 11px; height: 11px"
+              >
+                <line
+                  x1="5.97"
+                  y1="11.45"
+                  x2="5.97"
+                  y2=".5"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+                <line
+                  x1="11.45"
+                  y1="5.97"
+                  x2=".5"
+                  y2="5.97"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="label">Font</div>
+          <div class="control">
+            <div id="font-select-wrapper">
+              <select id="font-family-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Layout -->
+        <h1 style="margin-top: 50px">Layout</h1>
+        <div class="hr"></div>
+        <button id="line-highlight">
+          Highlight current line
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="line-num">
+          Display line numbers
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+
+        <!-- file importing -->
+        <input type="file" id="fileInput" style="display: none" />
+      </div>
+
+      <!-- modal -->
+      <div id="confirm-save-background">
+        <!-- confirm save tab close -->
+        <div id="confirm-save">
+          <p></p>
+          <div class="confirm-buttons">
+            <button id="confirm-save-yes">Save</button>
+            <button id="confirm-save-no">Don't Save</button>
+            <button id="confirm-save-cancel">Cancel</button>
+          </div>
+        </div>
+        <!-- confirm save window close -->
+        <div id="confirm-save-window">
+          <p>Do you want to save the changes?</p>
+          <div class="confirm-buttons">
+            <button id="confirm-save-all">Save All & Exit</button>
+            <button id="confirm-discard-all">Discard & Exit</button>
+            <button id="confirm-cancel-all">Cancel</button>
+          </div>
+        </div>
+        <!-- confirm save window close -->
+        <div id="about">
+          <div id="about-main">
+            <div style="display: flex; align-items: center; gap: 1rem">
+              <img src="favicon.ico" alt="App Icon" width="48" height="48" />
+              <div>
+                <div style="font-size: 20px; margin-bottom: 5px">Monapad</div>
+                <div id="version-text"></div>
+              </div>
+            </div>
+            <p style="margin-top: 12px">
+              This is a free text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.
+            </p>
+            <p>
+              <span>GitHub:</span><br />
+              <a href="https://github.com/sheetau" target="_blank">https://github.com/sheetau</a>
+            </p>
+            <p>
+              <span>Discord Server:</span><br />
+              <a href="https://discord.gg/2dXs5HwXuW" target="_blank">https://discord.gg/2dXs5HwXuW</a>
+            </p>
+            <p>
+              <span>Sheeta (Creator):</span><br />
+              <a href="https://linktr.ee/sheetavn" target="_blank">https://linktr.ee/sheetavn</a>
+            </p>
+            <p style="font-size: 13px; color: gray; margin-bottom: 0">
+              Disclaimer: This application is provided "as is" without any warranties. <br />
+              This application uses the Monaco Editor, an open-source project by Microsoft. <br />
+              © 2025 Sheeta. All rights reserved. <br />
+            </p>
+          </div>
+          <div id="about-footer">
+            <button id="about-close">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var global = global || window;
+    </script>
+    <script src="./build/bundle.js"></script>
+  </body>
+</html>
