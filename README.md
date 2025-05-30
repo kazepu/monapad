@@ -53,10 +53,13 @@ Feel free to review the source code since it is 100% open sourced.
 
 ## Contributing:
 
-if you like my work, please consider:
+Report bugs or submit feature requests [here](https://github.com/sheetau/monapad/issues).  
+If you like my work, please consider:
 
 - Star this project on GitHub
 - [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/sheeta)
+
+Join [my discord server](https://discord.gg/2dXs5HwXuW) to stay tuned.
 
 ## Dependencies and References:
 
