@@ -220,7 +220,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "dist": "electron-builder --publish always",
+    "clean": "rimraf dist",
+    "dist": "npm run clean && electron-builder --publish always",
     "build": "webpack",
     "watch": "webpack --watch"
   },
