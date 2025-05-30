@@ -120,12 +120,23 @@ function applyDecorations() {
 
   const decorations = [];
 
+  // ここで一括チェック
+  if (model.getLanguageId() !== "plaintext") {
+    currentDecorations = monacoEditor.deltaDecorations(currentDecorations, []);
+    return;
+  }
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.startsWith("-# ")) {
       decorations.push({
         range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
         options: { inlineClassName: "gray-text" },
+      });
+    } else if (line.startsWith("## ")) {
+      decorations.push({
+        range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
+        options: { inlineClassName: "heading-2" },
       });
     } else if (line.startsWith("# ")) {
       decorations.push({
@@ -1010,7 +1021,6 @@ function switchTab(data) {
     currentActive.selection = monacoEditor.getSelection();
     currentActive.fontSize = fontSize;
     currentActive.wordWrap = isWordWrapOn;
-    currentActive.isMarkdown = isMarkdownOn;
   }
 
   fontSize = data.fontSize || persistentFontSize; // font size for each tabs
@@ -1063,6 +1073,9 @@ function switchTab(data) {
   // restore Markdown state
   isMarkdownOn = data.isMarkdown ?? false;
   monaco.editor.setModelLanguage(monacoEditor.getModel(), isMarkdownOn ? "markdown" : "plaintext");
+  if (isMarkdownOn) {
+    applyDecorations();
+  }
   const mdBtn = document.querySelector('button[data-action="toggleMarkdown"] svg.checkmark');
   if (mdBtn) mdBtn.style.display = isMarkdownOn ? "inline-block" : "none";
 
@@ -1137,6 +1150,17 @@ async function openFile() {
   await loadFileByPath(filePath);
 }
 
+window.electronAPI.onOpenFile(async (filePath) => {
+  try {
+    await loadFileByPath(filePath);
+    console.log("File opened successfully via association:", filePath);
+    window.electronLog.info("File opened successfully via association:", filePath);
+  } catch (error) {
+    console.error("Failed to open file via association:", error);
+    window.electronLog.error("Failed to open file via association:", error);
+  }
+});
+
 // file load hadling
 async function loadFileByPath(filePath) {
   if (!filePath) return;
@@ -1150,10 +1174,13 @@ async function loadFileByPath(filePath) {
   }
 
   const content = await window.electronAPI.readFile(filePath);
-  if (!content) {
-    alert("Failed to read file.");
+  if (content === null || content === undefined) {
+    // alert("Failed to read file.");
+    console.log("Failed to read file.");
     return;
   }
+
+  const isMarkdownFile = /\.(md|markdown)$/i.test(filePath);
 
   if (tabData.length === 1) {
     const singleTab = tabData[0];
@@ -1165,6 +1192,7 @@ async function loadFileByPath(filePath) {
       singleTab.path = filePath;
       singleTab.originalContent = content;
       singleTab.unsavedIndicator = true;
+      singleTab.isMarkdown = isMarkdownFile;
 
       const nameSpan = singleTab.element.querySelector(".name");
       if (nameSpan) nameSpan.textContent = singleTab.name;
@@ -1184,6 +1212,7 @@ async function loadFileByPath(filePath) {
   newTabData.originalContent = content;
   newTabData._lastExternalContent = content;
   newTabData.unsavedIndicator = true;
+  newTabData.isMarkdown = isMarkdownFile;
 
   const newTabClose = newTabData.element.querySelector(".close");
   if (newTabClose) newTabClose.classList.remove("show-unsaved");
@@ -1626,6 +1655,7 @@ document.getElementById("custom-context-menu").addEventListener("click", async (
       isMarkdownOn = currentLang !== "markdown";
       if (currentTab) currentTab.isMarkdown = isMarkdownOn;
       monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "plaintext");
+      applyDecorations();
       {
         const btn = e.target.closest('button[data-action="toggleMarkdown"]');
         if (btn) {
@@ -1696,5 +1726,23 @@ window.addEventListener("keydown", async (e) => {
     const data = currentTab;
     if (!data) return;
     await attemptCloseTab(data);
+  }
+
+  // Ctrl + 1-9
+  if (e.ctrlKey && /^Digit[1-9]$/.test(e.code)) {
+    e.preventDefault();
+    const index = parseInt(e.code.slice(-1), 10) - 1;
+    if (tabData[index]) {
+      switchTab(tabData[index]);
+    }
+  }
+
+  // Ctrl + Tab
+  if (e.ctrlKey && e.code === "Tab") {
+    e.preventDefault();
+    if (!currentTab) return;
+    const currentIndex = tabData.indexOf(currentTab);
+    const nextIndex = (currentIndex + 1) % tabData.length;
+    switchTab(tabData[nextIndex]);
   }
 });

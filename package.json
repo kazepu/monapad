@@ -1,29 +1,228 @@
 {
   "name": "monapad",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.2",
+  "description": "notepad app",
   "main": "main.js",
   "build": {
     "appId": "com.sheetau.monapad",
     "productName": "Monapad",
     "win": {
       "target": "nsis",
-      "icon": "favicon.ico"
+      "icon": "icon/favicon.ico"
     },
     "files": [
       "main.js",
       "preload.js",
       "font/**/*",
-      "favicon.ico",
+      "icon/**/*",
       "index.html",
       "build/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "sheetau",
+        "repo": "monapad"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "fileAssociations": [
+      {
+        "ext": "asp",
+        "name": "Active Server Pages",
+        "icon": "icon/asp.ico"
+      },
+      {
+        "ext": "ass",
+        "name": "Advanced SubStation Alpha",
+        "icon": "icon/ass.ico"
+      },
+      {
+        "ext": "bash",
+        "name": "Bash Script",
+        "icon": "icon/bash.ico"
+      },
+      {
+        "ext": "bib",
+        "name": "BibTeX",
+        "icon": "icon/bib.ico"
+      },
+      {
+        "ext": "c",
+        "name": "C Source",
+        "icon": "icon/c.ico"
+      },
+      {
+        "ext": "cfg",
+        "name": "Configuration File",
+        "icon": "icon/cfg.ico"
+      },
+      {
+        "ext": "cpp",
+        "name": "C++ Source",
+        "icon": "icon/cpp.ico"
+      },
+      {
+        "ext": "cs",
+        "name": "C# Source",
+        "icon": "icon/cs.ico"
+      },
+      {
+        "ext": "css",
+        "name": "Cascading Style Sheets",
+        "icon": "icon/css.ico"
+      },
+      {
+        "ext": "h",
+        "name": "C/C++ Header",
+        "icon": "icon/h.ico"
+      },
+      {
+        "ext": "html",
+        "name": "HTML Document",
+        "icon": "icon/html.ico"
+      },
+      {
+        "ext": "ini",
+        "name": "INI Configuration",
+        "icon": "icon/ini.ico"
+      },
+      {
+        "ext": "java",
+        "name": "Java Source",
+        "icon": "icon/java.ico"
+      },
+      {
+        "ext": "js",
+        "name": "JavaScript",
+        "icon": "icon/js.ico"
+      },
+      {
+        "ext": "json",
+        "name": "JSON File",
+        "icon": "icon/json.ico"
+      },
+      {
+        "ext": "jsp",
+        "name": "JavaServer Pages",
+        "icon": "icon/jsp.ico"
+      },
+      {
+        "ext": "log",
+        "name": "Log File",
+        "icon": "icon/log.ico"
+      },
+      {
+        "ext": "md",
+        "name": "Markdown",
+        "icon": "icon/md.ico"
+      },
+      {
+        "ext": "perl",
+        "name": "Perl Script",
+        "icon": "icon/perl.ico"
+      },
+      {
+        "ext": "php",
+        "name": "PHP Script",
+        "icon": "icon/php.ico"
+      },
+      {
+        "ext": "py",
+        "name": "Python Script",
+        "icon": "icon/py.ico"
+      },
+      {
+        "ext": "rb",
+        "name": "Ruby Script",
+        "icon": "icon/rb.ico"
+      },
+      {
+        "ext": "rc",
+        "name": "Resource Script",
+        "icon": "icon/rc.ico"
+      },
+      {
+        "ext": "sh",
+        "name": "Shell Script",
+        "icon": "icon/sh.ico"
+      },
+      {
+        "ext": "sql",
+        "name": "SQL Script",
+        "icon": "icon/sql.ico"
+      },
+      {
+        "ext": "srt",
+        "name": "SubRip Subtitle",
+        "icon": "icon/srt.ico"
+      },
+      {
+        "ext": "ssa",
+        "name": "SubStation Alpha Subtitle",
+        "icon": "icon/ssa.ico"
+      },
+      {
+        "ext": "txt",
+        "name": "Text Document",
+        "icon": "icon/txt.ico"
+      },
+      {
+        "ext": "vb",
+        "name": "Visual Basic",
+        "icon": "icon/vb.ico"
+      },
+      {
+        "ext": "vue",
+        "name": "Vue Component",
+        "icon": "icon/vue.ico"
+      },
+      {
+        "ext": "xml",
+        "name": "XML File",
+        "icon": "icon/xml.ico"
+      },
+      {
+        "ext": "yml",
+        "name": "YAML File",
+        "icon": "icon/yml.ico"
+      },
+      {
+        "ext": "ps1",
+        "name": "PowerShell Script",
+        "icon": "icon/file.ico"
+      },
+      {
+        "ext": "env",
+        "name": "Environment File",
+        "icon": "icon/file.ico"
+      },
+      {
+        "ext": "diff",
+        "name": "Diff File",
+        "icon": "icon/file.ico"
+      },
+      {
+        "ext": "go",
+        "name": "Go Source",
+        "icon": "icon/file.ico"
+      },
+      {
+        "ext": "lua",
+        "name": "Lua Script",
+        "icon": "icon/file.ico"
+      }
     ]
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron .",
-    "dist": "electron-builder",
-    "build": "webpack"
+    "dist": "electron-builder --publish always",
+    "build": "webpack",
+    "watch": "webpack --watch"
   },
   "keywords": [],
   "author": "",
@@ -40,7 +239,9 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "electron-log": "^5.4.0",
     "electron-store": "^8.1.0",
+    "electron-updater": "^6.6.2",
     "font-list": "^1.5.1",
     "global": "^4.4.0",
     "monaco-editor": "^0.52.2"

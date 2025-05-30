@@ -1,13 +1,17 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
+const { autoUpdater } = require("electron-updater");
 const { getFonts } = require("font-list");
 const path = require("path");
 const fs = require("fs");
 const Store = require("electron-store").default;
+const log = require("electron-log");
 
 const store = new Store();
 const watchers = new Map();
+const gotTheLock = app.requestSingleInstanceLock();
 
-let mainWindow;
+let mainWindow = null;
+let filePathToOpen = null;
 
 function createWindow() {
   const windowBounds = store.get("windowBounds") || { width: 800, height: 600 };
@@ -26,7 +30,7 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: false,
     },
-    icon: path.join(__dirname, "favicon.ico"),
+    icon: path.join(__dirname, "icon/favicon.ico"),
   });
 
   mainWindow.loadFile("index.html");
@@ -64,6 +68,10 @@ function createNewWindow() {
     minWidth: 400,
     minHeight: 210,
     frame: false,
+    transparent: true,
+    vibrancy: "acrylic",
+    visualEffectState: "active",
+    backgroundColor: "#00000000",
     center: true,
     autoHideMenuBar: true,
     show: false,
@@ -73,7 +81,7 @@ function createNewWindow() {
       nodeIntegration: false,
       sandbox: false,
     },
-    icon: path.join(__dirname, "favicon.ico"),
+    icon: path.join(__dirname, "icon/favicon.ico"),
   });
 
   win.loadFile("index.html");
@@ -155,7 +163,7 @@ ipcMain.handle("file:watch", (event, filePath) => {
     });
     watchers.set(filePath, watcher);
   } catch (err) {
-    console.error("watch error:", err);
+    log.error("watch error:", err);
   }
 });
 
@@ -171,7 +179,7 @@ ipcMain.handle("open-path", async (event, path) => {
   try {
     await shell.showItemInFolder(path);
   } catch (error) {
-    console.error("Failed to open path:", error);
+    log.error("Failed to open path:", error);
   }
 });
 
@@ -241,20 +249,115 @@ ipcMain.on("print-content", async (event, { text, fontFamily }) => {
 
   printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
     if (!success) {
-      console.error("[main] print failed:", failureReason);
+      log.error("[main] print failed:", failureReason);
     }
     printWindow.close();
   });
 });
 
-app.whenReady().then(() => {
-  createWindow();
+function getFilePathFromArgv(argv) {
+  log.info("Debug: process.argv =", argv);
 
-  app.on("activate", function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    log.info(`Debug: checking arg[${i}] =`, arg);
+
+    // - not parameter
+    // - doesn't end with .exe nor .app
+    // - path exists
+    // - has extension
+    if (
+      arg &&
+      !arg.startsWith("--") &&
+      !arg.endsWith(".exe") &&
+      !arg.endsWith(".app") &&
+      fs.existsSync(arg) &&
+      path.extname(arg)
+    ) {
+      log.info("Debug: Found valid file path:", arg);
+      return path.resolve(arg);
+    }
+  }
+
+  log.info("Debug: No valid file path found");
+  return null;
+}
+
+// Handle file association
+if (!gotTheLock) {
+  app.quit();
+} else {
+  // Handle second instance (when file is double-clicked while app is running)
+  app.on("second-instance", (event, argv, workingDirectory) => {
+    log.info("Debug: second-instance triggered with argv:", argv);
+
+    const filePath = getFilePathFromArgv(argv);
+    if (filePath) {
+      log.info("Debug: Opening file in existing instance:", filePath);
+
+      // Focus existing window
+      const windows = BrowserWindow.getAllWindows();
+      if (windows.length > 0) {
+        const win = windows[0];
+        if (win.isMinimized()) win.restore();
+        win.focus();
+        win.webContents.send("open-file", filePath);
+      }
+    } else {
+      // No file to open, just focus the window
+      const windows = BrowserWindow.getAllWindows();
+      if (windows.length > 0) {
+        const win = windows[0];
+        if (win.isMinimized()) win.restore();
+        win.focus();
+      }
+    }
+  });
+
+  app.whenReady().then(() => {
+    createWindow();
+
+    // Handle file opened on app start
+    filePathToOpen = getFilePathFromArgv(process.argv);
+
+    mainWindow.webContents.once("did-finish-load", () => {
+      if (filePathToOpen) {
+        log.info("Sending open-file event to renderer");
+        mainWindow.webContents.send("open-file", filePathToOpen);
+        filePathToOpen = null;
+      }
+    });
+
+    // Auto updater (optional)
+    if (autoUpdater) {
+      autoUpdater.checkForUpdatesAndNotify();
+    }
+
+    app.on("activate", function () {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
   });
 
   app.on("window-all-closed", function () {
     if (process.platform !== "darwin") app.quit();
   });
-});
+
+  // Handle macOS file opening
+  app.on("open-file", (event, path) => {
+    event.preventDefault();
+    log.info("Debug: macOS open-file event triggered with path:", path);
+
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send("open-file", path);
+    } else {
+      // If no windows exist, store the file path and open it after window creation
+      app.whenReady().then(() => {
+        createWindow();
+        mainWindow.webContents.once("did-finish-load", () => {
+          mainWindow.webContents.send("open-file", path);
+        });
+      });
+    }
+  });
+}

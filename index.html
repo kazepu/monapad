@@ -320,14 +320,17 @@
       .tab .close .close-svg {
         display: none;
         line-height: 0;
+        height: 15px;
+        align-items: center;
+        justify-content: center;
       }
 
       .tab:hover .close .close-svg {
-        display: block;
+        display: flex;
       }
 
       .tab.active .close .close-svg {
-        display: block;
+        display: flex;
       }
 
       .tab .close .unsaved-dot {
@@ -349,7 +352,7 @@
       }
 
       .tab:hover .close.show-unsaved .close-svg {
-        display: block;
+        display: flex;
       }
 
       .tab:hover .close.show-unsaved .unsaved-dot {
@@ -468,6 +471,9 @@
       }
       .gray-text {
         color: gray !important;
+      }
+      .heading-2 {
+        color: #adcfeb !important;
       }
       .monaco-editor .unexpected-closing-bracket {
         color: rgba(255, 255, 255, 1) !important;
@@ -1179,7 +1185,7 @@
         <div id="about">
           <div id="about-main">
             <div style="display: flex; align-items: center; gap: 1rem">
-              <img src="favicon.ico" alt="App Icon" width="48" height="48" />
+              <img src="icon/favicon.ico" alt="App Icon" width="48" height="48" />
               <div>
                 <div style="font-size: 20px; margin-bottom: 5px">Monapad</div>
                 <div id="version-text"></div>
@@ -1190,7 +1196,7 @@
             </p>
             <p>
               <span>GitHub:</span><br />
-              <a href="https://github.com/sheetau" target="_blank">https://github.com/sheetau</a>
+              <a href="https://github.com/sheetau/monapad" target="_blank">https://github.com/sheetau/monapad</a>
             </p>
             <p>
               <span>Discord Server:</span><br />

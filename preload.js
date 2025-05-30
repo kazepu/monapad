@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer, webUtils, shell } = require("electron");
 const fs = require("fs");
+const log = require("electron-log");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
@@ -13,9 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showMessageBox: (options) => ipcRenderer.invoke("show-message-box", options),
   createNewWindow: () => ipcRenderer.invoke("window:createNew"),
   fileExists: (filePath) => ipcRenderer.invoke("file:exists", filePath),
-  getPathForFile: (file) => {
-    return webUtils.getPathForFile(file);
-  },
+  getPathForFile: (file) => webUtils.getPathForFile(file),
   openPath: (path) => ipcRenderer.invoke("open-path", path),
 
   // file watch
@@ -31,4 +30,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // font
   getFonts: () => ipcRenderer.invoke("get-fonts"),
+
+  onOpenFile: (cb) => ipcRenderer.on("open-file", (_, path) => cb(path)),
+  removeOpenFileListener: () => ipcRenderer.removeAllListeners("open-file"),
+});
+
+contextBridge.exposeInMainWorld("electronLog", {
+  info: (...args) => log.info(...args),
+  error: (...args) => log.error(...args),
+  warn: (...args) => log.warn(...args),
 });
