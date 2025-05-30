@@ -16,7 +16,7 @@ Monapad is a modern text editor designed for simplicity and speed, built on the 
 - Smooth and responsive tab management, similar to the Chromium browser experience.
 - Supports many of the same keyboard shortcuts and functionalities as VSCode.
 - Special line formatting:
-  - Lines starting with `# ` are highlighted.
+  - Lines starting with `# ` and `## ` are highlighted.
   - Lines starting with `-# ` are shown in gray.
 - Syntax highlighting for Markdown.
 
@@ -31,7 +31,7 @@ The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting i
 
 - Ctrl+T to create new tab.
 - Ctrl+W to close current tab.
-- Ctrl+(Shift)+Tab to switch between tabs.
+- Ctrl+Tab to switch between tabs.
 - Ctrl+Num(1-9) to quickly switch to specified tab.
 - Ctrl+"+/-" or "mouse wheel" for zooming. Ctrl+"0" to reset zooming to default.
 - Ctrl+Click to open link.
