@@ -18,6 +18,7 @@ Monapad is a modern text editor designed for simplicity and speed, built on the 
 - Special line formatting:
   - Lines starting with `# ` and `## ` are highlighted.
   - Lines starting with `-# ` are shown in gray.
+  - Lines starting with `- ` have their dash character highlighted.
 - Syntax highlighting for Markdown.
 
 Standard text editors can become hard to read when handling large documents, as all text often appears in the same color. Monapad was created to solve this by offering lightweight highlight features without fully relying on Markdown formatting. It also allows users to use familiar VSCode-style shortcuts and editing features.
@@ -41,7 +42,7 @@ For more editor shortcuts, please refer to the sections **Basic editing**, **Sea
 
 ## Downloads:
 
-Go to [Monapad Releases](https://github.com/sheetau/monapad/releases) and download the latest version of **Monapad-Setup-1.0.1.exe**.
+Go to [Monapad Releases](https://github.com/sheetau/monapad/releases) and download the latest version of **Monapad-Setup-x.x.x.exe**.
 
 ## Disclaimer and Privacy statement:
 

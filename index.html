@@ -466,7 +466,8 @@
         text-align: right;
       }
 
-      .heading {
+      .heading,
+      .dash-marker {
         color: var(--txtBlue) !important;
       }
       .gray-text {
@@ -715,6 +716,7 @@
         height: 28px;
         line-height: 28px;
         margin-bottom: 5px;
+        font-size: 14px;
       }
 
       #font-layout-menu .label {
@@ -726,8 +728,10 @@
         display: flex;
         align-items: center;
       }
-      #size-decrease,
-      #size-increase {
+      #font-size-decrease,
+      #font-size-increase,
+      #tab-size-decrease,
+      #tab-size-increase {
         cursor: pointer;
         width: 23px;
         height: 23px;
@@ -736,8 +740,10 @@
         align-items: center;
         justify-content: center;
       }
-      #size-decrease:hover,
-      #size-increase:hover {
+      #font-size-decrease:hover,
+      #font-size-increase:hover,
+      #tab-size-decrease:hover,
+      #tab-size-increase:hover {
         background-color: var(--color3);
       }
       #font-family-select,
@@ -1076,7 +1082,7 @@
         <div class="row">
           <div class="label">Size</div>
           <div class="control">
-            <div id="size-decrease">
+            <div id="font-size-decrease">
               <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
                 <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
               </svg>
@@ -1085,7 +1091,7 @@
               id="font-size-value"
               style="color: #fff; user-select: none; min-width: 25px; display: inline-block; text-align: center"
             ></span>
-            <div id="size-increase">
+            <div id="font-size-increase">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 11.95 11.95"
@@ -1156,6 +1162,48 @@
             />
           </svg>
         </button>
+        <div class="row">
+          <div class="label">Tab Size</div>
+          <div class="control">
+            <div id="tab-size-decrease">
+              <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
+                <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
+              </svg>
+            </div>
+            <span
+              id="tab-size-value"
+              style="color: #fff; user-select: none; min-width: 25px; display: inline-block; text-align: center"
+            ></span>
+            <div id="tab-size-increase">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 11.95 11.95"
+                style="vertical-align: middle; width: 11px; height: 11px"
+              >
+                <line
+                  x1="5.97"
+                  y1="11.45"
+                  x2="5.97"
+                  y2=".5"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+                <line
+                  x1="11.45"
+                  y1="5.97"
+                  x2=".5"
+                  y2="5.97"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         <!-- file importing -->
         <input type="file" id="fileInput" style="display: none" />

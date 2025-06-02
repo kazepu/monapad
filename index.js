@@ -13,10 +13,12 @@ const themeButtons = themeMenu.querySelectorAll("button");
 const newWindowBtn = document.getElementById("newWindowBtn");
 const newTabBtn = document.getElementById("newTabBtn");
 const fontSizeValue = document.getElementById("font-size-value");
-const sizeDecrease = document.getElementById("size-decrease");
-const sizeIncrease = document.getElementById("size-increase");
+const fontSizeDecrease = document.getElementById("font-size-decrease");
+const fontSizeIncrease = document.getElementById("font-size-increase");
+const tabSizeValue = document.getElementById("tab-size-value");
+const tabSizeDecrease = document.getElementById("tab-size-decrease");
+const tabSizeIncrease = document.getElementById("tab-size-increase");
 const fontFamilySelect = document.getElementById("font-family-select");
-const fontStyleSelect = document.getElementById("font-style-select");
 const fontLayoutButton = document.getElementById("font-layout");
 const fontLayoutMenu = document.getElementById("font-layout-menu");
 const customContextMenu = document.getElementById("custom-context-menu");
@@ -26,6 +28,7 @@ const excludedIds = ["changeTheme", "openRecent"]; // buttons that dont close me
 const STORAGE_KEY = "monacoFontSizePersistent";
 let persistentFontSize = Number(localStorage.getItem(STORAGE_KEY)) || 16;
 let fontSize = persistentFontSize;
+let tabSize = Math.min(10, Math.max(1, parseInt(localStorage.getItem("tabSize")) || 4));
 let draggingTab = null;
 let dragStartX = 0;
 let originalX = 0;
@@ -102,7 +105,7 @@ monacoEditor = monaco.editor.create(editor, {
   contextmenu: false,
   renderIndentGuides: false,
   insertSpaces: false,
-  tabSize: 8,
+  tabSize: tabSize,
   find: {
     addExtraSpaceOnTop: false,
   },
@@ -120,7 +123,6 @@ function applyDecorations() {
 
   const decorations = [];
 
-  // ここで一括チェック
   if (model.getLanguageId() !== "plaintext") {
     currentDecorations = monacoEditor.deltaDecorations(currentDecorations, []);
     return;
@@ -128,7 +130,17 @@ function applyDecorations() {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.startsWith("-# ")) {
+
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith("- ")) {
+      const leadingSpaces = line.length - trimmed.length;
+      const dashIndex = leadingSpaces + 1;
+
+      decorations.push({
+        range: new monaco.Range(i + 1, leadingSpaces + 1, i + 1, dashIndex + 1),
+        options: { inlineClassName: "dash-marker" },
+      });
+    } else if (line.startsWith("-# ")) {
       decorations.push({
         range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
         options: { inlineClassName: "gray-text" },
@@ -257,21 +269,45 @@ function updatePersistentFontSize(newSize) {
   fontSize = persistentFontSize;
   monacoEditor.updateOptions({ fontSize: persistentFontSize });
 
-  sizeDecrease.style.opacity = persistentFontSize <= 8 ? "0.25" : "1";
-  sizeDecrease.style.pointerEvents = persistentFontSize <= 8 ? "none" : "auto";
+  fontSizeDecrease.style.opacity = persistentFontSize <= 8 ? "0.25" : "1";
+  fontSizeDecrease.style.pointerEvents = persistentFontSize <= 8 ? "none" : "auto";
 
-  sizeIncrease.style.opacity = persistentFontSize >= 40 ? "0.25" : "1";
-  sizeIncrease.style.pointerEvents = persistentFontSize >= 40 ? "none" : "auto";
+  fontSizeIncrease.style.opacity = persistentFontSize >= 40 ? "0.25" : "1";
+  fontSizeIncrease.style.pointerEvents = persistentFontSize >= 40 ? "none" : "auto";
 
   updateStatusBar?.();
 }
 updatePersistentFontSize(persistentFontSize);
-sizeDecrease.addEventListener("click", () => {
+fontSizeDecrease.addEventListener("click", () => {
   updatePersistentFontSize(persistentFontSize - 1);
 });
-sizeIncrease.addEventListener("click", () => {
+fontSizeIncrease.addEventListener("click", () => {
   updatePersistentFontSize(persistentFontSize + 1);
 });
+
+// tab size button event
+// tab size on launch
+tabSizeValue.textContent = tabSize;
+monacoEditor.updateOptions({ tabSize });
+
+function updateTabSize(newSize) {
+  tabSize = Math.min(10, Math.max(1, newSize));
+  tabSizeValue.textContent = tabSize;
+  localStorage.setItem("tabSize", tabSize);
+  monacoEditor.updateOptions({ tabSize });
+
+  tabSizeDecrease.style.opacity = tabSize <= 1 ? "0.25" : "1";
+  tabSizeDecrease.style.pointerEvents = tabSize <= 1 ? "none" : "auto";
+  tabSizeIncrease.style.opacity = tabSize >= 10 ? "0.25" : "1";
+  tabSizeIncrease.style.pointerEvents = tabSize >= 10 ? "none" : "auto";
+
+  updateStatusBar?.();
+}
+
+updateTabSize(tabSize);
+
+tabSizeDecrease.addEventListener("click", () => updateTabSize(tabSize - 1));
+tabSizeIncrease.addEventListener("click", () => updateTabSize(tabSize + 1));
 
 // update font size with ctrl + mouse wheel / + - (temporary)
 const updateFontSize = (newSize) => {
@@ -1732,7 +1768,7 @@ window.addEventListener("keydown", async (e) => {
   if (e.ctrlKey && /^Digit[1-9]$/.test(e.code)) {
     e.preventDefault();
     const index = parseInt(e.code.slice(-1), 10) - 1;
-    if (tabData[index]) {
+    if (tabData[index] && tabData[index] !== currentTab) {
       switchTab(tabData[index]);
     }
   }
