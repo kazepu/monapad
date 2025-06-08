@@ -5,12 +5,12 @@
   Monapad
 </h1>
 <p align="center">
-  A modern and minimalist text editor that uses the same Monaco Editor as VSCode, offering a dark theme, tab support, and lightweight highlight features.
+  A modern text editor that uses the same Monaco Editor as VSCode, offering a dark theme, tab support, and lightweight highlight features.
 </p>
 
 ## Features:
 
-Monapad is a modern text editor designed for simplicity and speed, built on the Monaco Editor — the same core editor used in Visual Studio Code. Its key features include:
+Monapad is a modern text editor designed for efficient editing and readability, built on the Monaco Editor — the same core editor used in Visual Studio Code. Its key features include:
 
 - A clean, modern dark theme-only interface for distraction-free writing.
 - Smooth and responsive tab management, similar to the Chromium browser experience.
@@ -25,8 +25,7 @@ Standard text editors can become hard to read when handling large documents, as 
 
 The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting its purpose: a simple yet powerful editing experience. With support for text search and replace, multi-cursor editing, and essential editing operations, Monapad brings the familiarity of VSCode into a streamlined package.
 
-![Screenshot Dark](screenshots/monapad_ss.png?raw=true "Dark")
-![Screenshot Onyx](screenshots/monapad_ss2.png?raw=true "Onyx")
+![Screenshot Dark](screenshots/monapad_ss3.png?raw=true "Dark")
 
 ## Shortcuts:
 
@@ -43,6 +42,10 @@ For more editor shortcuts, please refer to the sections **Basic editing**, **Sea
 ## Downloads:
 
 Go to [Monapad Releases](https://github.com/sheetau/monapad/releases) and download the latest version of **Monapad-Setup-x.x.x.exe**.
+
+> ⚠️ Since this app is not code-signed yet, Windows SmartScreen may show a warning when launching the installer, especially while the download count is still low.
+> If you see the warning, click “More info” and then “Run anyway” to proceed with the installation.
+> This is expected behavior and the warning will disappear over time as the app gains reputation.
 
 ## Disclaimer and Privacy statement:
 
