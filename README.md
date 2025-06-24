@@ -30,7 +30,7 @@ Standard text editors can become hard to read when handling large documents, as 
 The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting its purpose: a simple yet powerful editing experience. With support for text search and replace, multi-cursor editing, and essential editing operations, Monapad brings the familiarity of VSCode into a streamlined package.
 
 ![Screenshot Dark](screenshots/monapad_ss_dark.png?raw=true "Dark")
-![Screenshot Ayu](screenshots/monapad_ss_ayu.png?raw=true "Ayu")
+![Screenshot Ayu](customthemes/ayu/preview.png?raw=true "Ayu")
 
 ## Shortcuts:
 
@@ -51,6 +51,14 @@ Go to [Monapad Releases](https://github.com/sheetau/monapad/releases) and downlo
 > ⚠️ Since this app is not code-signed yet, Windows SmartScreen may show a warning when launching the installer, especially while the download count is still low.
 > If you see the warning, click “More info” and then “Run anyway” to proceed with the installation.
 > This is expected behavior and the warning will disappear over time as the app gains reputation.
+
+## Custom Themes:
+
+- [Ayu Theme](https://github.com/sheetau/monapad/tree/main/customthemes/ayu/README.md) [[sheeta](https://github.com/sheetau)]
+
+To use custom themes, download CSS file from the above list or from [official repository](https://github.com/sheetau/monapad/tree/main/customthemes) and place it to themes folder that can be opened from the settings in the app.
+
+Click [here](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md) To see how to setup and submit your own custom themes.
 
 ## Disclaimer and Privacy statement:
 

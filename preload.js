@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   fileExists: (filePath) => ipcRenderer.invoke("file:exists", filePath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openPath: (path) => ipcRenderer.invoke("open-path", path),
+  onWindowFocus: (callback) => ipcRenderer.on("window-focus", (event, focused) => callback(focused)),
 
   // file watch
   watchFile: (filePath) => ipcRenderer.invoke("file:watch", filePath),
@@ -33,6 +34,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   onOpenFile: (cb) => ipcRenderer.on("open-file", (_, path) => cb(path)),
   removeOpenFileListener: () => ipcRenderer.removeAllListeners("open-file"),
+
+  // theme
+  getCustomThemes: () => ipcRenderer.invoke("get-custom-themes"),
+  getUserDataPath: () => ipcRenderer.invoke("get-user-data-path"),
+  readCssFile: (filePath) => ipcRenderer.invoke("read-css-file", filePath),
+  watchCssFile: (filePath) => ipcRenderer.send("watch-css-file", filePath),
+  unwatchCssFile: (filePath) => ipcRenderer.send("unwatch-css-file", filePath),
+  onCssFileUpdated: (callback) => ipcRenderer.on("css-file-updated", (_, path) => callback(path)),
 });
 
 contextBridge.exposeInMainWorld("electronLog", {
