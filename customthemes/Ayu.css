@@ -1,0 +1,401 @@
+/* use shift + ctrl + i to inspect */
+:root {
+  --color1: #0b0e14 !important; /* !important required. tab, modal background. */
+  --color2: #0f131a !important; /* !important required. toolbar, statusbar, menu, message background */
+  --color3: #1c212b !important; /* !important required. button hover, modal button */
+  --editorText: #bfbdb6; /* text color */
+  --shadow: #565b66;
+  --btnHover: #3b414d; /* modal button hover */
+  --highlight: #e6b450; /* input active border, link color */
+  --btnHighlight: var(--highlight); /* modal highlight button */
+  --warn: #d95757; /* deleted file title */
+  --windowClose: var(--warn); /* window close */
+
+  /* syntax highlight color (.marker-transparent for opacity of #, -# and >) */
+  /* var() and 6 digit hex are allowed */
+  /* style: bold italic underline (set with space if multiple) */
+  --heading1: #e6b450; /* heading 1 */
+  --heading1Style: ;
+
+  --heading2: #aac92f; /* heading 2 */
+  --heading2Style: ;
+
+  --heading3: #b66c17; /* heading 3 */
+  --heading3Style: ;
+
+  --bulletPoint: var(--highlight); /* bullet point */
+  --bulletPointStyle: ;
+
+  --numberList: var(--warn); /* bullet point */
+  --numberListStyle: ;
+
+  --subText: #bfbdb6; /* sub text */
+  --subTextStyle: italic;
+
+  --blockQuote: #95e6cb; /* block quote */
+  --blockQuoteStyle: italic;
+
+  --inlineCode: #f29668; /* inline code */
+  --inlineCodeStyle: ;
+
+  --codeBlockFence: #3b414d; /* code block fence */
+  --codeBlockFenceStyle: ;
+
+  --codeBlock: #d2a6ff; /* code block */
+  --codeBlockStyle: ;
+
+  /* Monaco Editor theme variables */
+  /* var(), 6 and 8 digit hex are allowed */
+  /* refer to https://code.visualstudio.com/api/references/theme-color#lists-and-trees */
+  /* editor.background -> --vscode-editor-background */
+  --vscode-editor-background: #0b0e14;
+  --vscode-editor-foreground: #bfbdb6;
+  --vscode-editorLineNumber-foreground: #6c738099;
+  --vscode-editorLineNumber-activeForeground: #6c7380e6;
+  --vscode-editorActionList-focusForeground: #bfbdb6;
+  --vscode-editor-foldPlaceholderForeground: #bfbdb6;
+  --vscode-editor-placeholderForeground: #bfbdb6;
+  --vscode-disabledForeground: #bfbdb640;
+  --vscode-editor-lineHighlightBackground: #131721;
+  --vscode-editor-lineHighlightBorder: #00000000;
+  --vscode-scrollbarSlider-activeBackground: #b6b6bf80;
+  --vscode-scrollbarSlider-hoverBackground: #b6b6bf60;
+  --vscode-scrollbarSlider-background: #b6b6bf40;
+  --vscode-minimapSlider-activeBackground: #b6b6bf40;
+
+  /* menu item background, button hover background */
+  --vscode-quickInputList-focusBackground: #1c212b;
+  --vscode-button-hoverBackground: #1c212b;
+  --vscode-list-hoverBackground: #1c212b;
+  --vscode-list-activeSelectionBackground: #1c212b;
+  --vscode-menu-selectionBackground: #1c212b;
+  --vscode-editorStickyScrollHover-background: #1c212b;
+  --vscode-badge-background: #1c212b;
+  --vscode-list-dropBackground: #1c212b;
+  --vscode-editorActionList-focusForeground: #1c212b;
+
+  /* input box */
+  --vscode-input-foreground: #bfbdb6;
+  --vscode-input-border: #4b505940;
+  --vscode-input-background: #0b0e14;
+  --vscode-input-placeholderForeground: #bfbdb6;
+
+  /* widget */
+  --vscode-editorWidget-foreground: #bfbdb680;
+  --vscode-editorWidget-background: #0f131a;
+  --vscode-editorWidget-border: #1c212b;
+
+  /* tooltip */
+  --vscode-editorHoverWidget-background: #0f131a;
+  --vscode-editorHoverWidget-border: #1c212b;
+
+  /* highlight */
+  --vscode-editorLink-activeForeground: #e6b450;
+  --vscode-textLink-foreground: #e6b450;
+  --vscode-textLink-activeForeground: #e6b45080;
+  --vscode-focusBorder: #e6b450;
+  --vscode-inputOption-activeBorder: #e6b450;
+  --vscode-editorCursor-foreground: #e6b450;
+
+  /* selection */
+  --vscode-editor-selectionBackground: #55a7ff40;
+  --vscode-editor-selectionHighlightBackground: #2a3b2c;
+  --vscode-editorOverviewRuler-selectionHighlightForeground: #00000000;
+  --vscode-selection-background: #e6b45040; /* selection in input */
+  --vscode-minimap-selectionHighlight: #00000000;
+  --vscode-minimap-selectionOccurrenceHighlight: #00000000;
+
+  /* find match */
+  --vscode-editor-findMatchBackground: #6c5980; /* current match position */
+  --vscode-editor-findMatchHighlightBackground: #71658d54; /* all matches */
+  --vscode-editor-inactiveSelectionBackground: #55a7ff1f; /* no match, selected match */
+  --vscode-searchEditor-findMatchBackground: #6c598038;
+  --vscode-editorOverviewRuler-findMatchForeground: #6c59807d; /* all matches in scrollbar */
+  --vscode-minimap-findMatchHighlight: #6c5980; /* all matches in minimap */
+
+  /* markdown syntax highlight color */
+  /* var() and 6 digit hex are allowed */
+  /* refer to https://github.com/trofimander/monaco-markdown/blob/master/src/ts/markdown.ts */
+  /* emphasis -> --md-emphasis */
+  --md-keyword: #aad94c; /* # header */
+  --md-emphasis: #f07178; /* *italic* */
+  --md-strong: #f07178; /* **bold** */
+  --md-variable: #f29668; /* `code` */
+  --md-string: #bfb6b6; /* ```code block``` */
+  --md-string-link: #39bae6; /* [link]() */
+  --md-comment: #95e6cb; /* > quote */
+  --md-tag: #39bae6; /* <img> */
+  --md-attribute-name-html: #d95757; /* <img "src"=...> */
+  --md-delimiter-html: #bfbdb6; /* <img src"="...> */
+  --md-string-html: #aad94c; /* <img src="center"> */
+}
+
+/* markdown bracket highlighting color */
+.monaco-editor .bracket-highlighting-0,
+.monaco-editor .bracket-highlighting-1,
+.monaco-editor .bracket-highlighting-2 {
+  color: #39bae6 !important;
+}
+
+/* highlight button, modal */
+#confirm-save p,
+#confirm-save-window p {
+  color: var(--shadow);
+}
+#confirm-save-window .confirm-buttons #confirm-save-all:hover,
+#confirm-save .confirm-buttons #confirm-save-yes:hover {
+  background: color-mix(in srgb, var(--highlight) 75%, transparent);
+}
+#confirm-save-all,
+#confirm-save-yes {
+  color: #734d00 !important;
+}
+#file-drop {
+  /* border: dashed 2px color-mix(in srgb, var(--editorText) 50%, transparent); */
+  background: var(--highlight);
+  color: #734d00;
+  border: none;
+  outline: 2px dashed #734d0080;
+  outline-offset: -12.5px;
+  border-radius: 17px;
+  font-weight: 500;
+}
+
+/* go to line widget input focus border */
+:focus-visible {
+  outline: var(--highlight) solid 1px;
+  border-radius: 2px;
+}
+
+/* remove right gap in go to line widget */
+.monaco-action-bar.quick-input-inline-action-bar {
+  display: none !important;
+}
+
+/* svg */
+line,
+rect,
+polyline {
+  stroke: var(--editorText) !important;
+}
+#close-button:hover line {
+  stroke: var(--color2) !important;
+}
+#font-select-wrapper::after,
+#lang-select-wrapper::after {
+  /* add 6 digit hex after %23 to change color */
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23bfbdb6" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
+    no-repeat center;
+}
+
+/* color disabled */
+#menu button .shortcut,
+#custom-context-menu button .shortcut,
+#tab-context-menu button .shortcut {
+  color: var(--shadow);
+  opacity: 1;
+}
+.disabled {
+  color: var(--shadow) !important;
+  opacity: 1;
+  pointer-events: none;
+}
+.disabled line,
+.disabled polyline {
+  stroke: var(--shadow) !important;
+}
+
+/* tab */
+#toolbar {
+  position: fixed;
+  width: 100%;
+  overflow: visible !important;
+}
+#menu-button svg {
+  width: 16px;
+  height: 8px;
+}
+#menu-button svg line {
+  stroke: var(--shadow) !important;
+  stroke-width: 2px;
+}
+#menu-button svg {
+  overflow: visible;
+}
+#menu-button:hover svg line {
+  stroke: var(--highlight) !important;
+}
+#menu-button:hover {
+  background: var(--color1);
+}
+#menu {
+  position: fixed;
+}
+#tabs-container {
+  max-width: calc(100vw - 265px + 2px);
+  overflow: visible !important;
+}
+#tabs {
+  overflow: visible !important;
+}
+#tabs::-webkit-scrollbar {
+  width: 0px; /* Chrome/Safari用 */
+  background: transparent;
+}
+#add-tab {
+  min-width: 26px;
+  width: 26px;
+  height: 26px;
+  margin: 0 5px;
+  border-radius: 5px;
+}
+.tab {
+  color: color-mix(in srgb, var(--editorText) 50%, transparent);
+  border-top: 1px solid #00000000;
+  border-right: 1px solid #00000000;
+  border-left: 1px solid #00000000;
+  background: var(--color1);
+  font-size: 13px;
+  height: 34px;
+  width: 220px;
+  max-width: 220px;
+  min-width: 0;
+  overflow: visible;
+  box-sizing: border-box;
+}
+.tab span.name {
+  max-width: calc(100% - 20px) !important;
+}
+.tab.active {
+  color: var(--editorText);
+  border-top: 1px solid var(--highlight);
+  border-right: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+  height: 36px;
+}
+.tab:hover {
+  color: var(--editorText);
+}
+.dragging .tab:not(.active):hover {
+  color: color-mix(in srgb, var(--editorText) 50%, transparent);
+}
+.tab.active .close .unsaved-dot {
+  background: var(--editorText);
+  opacity: 1;
+  width: 8px;
+  height: 8px;
+}
+.tab:not(.active):not(.tab-dragging) span.name {
+  color: var(--shadow);
+}
+.tab:not(.active) span.name.warn {
+  opacity: 0.5;
+}
+.tab:not(.active):hover span.name {
+  color: var(--editorText);
+}
+.tab span.name.warn,
+.tab:hover span.name.warn {
+  color: var(--warn);
+  opacity: 1;
+}
+.tab:not(.active) .close .unsaved-dot {
+  background: var(--shadow);
+  opacity: 1;
+  width: 8px;
+  height: 8px;
+}
+.close-svg {
+  width: 20px;
+  height: 20px !important;
+  margin-right: -5px;
+  border-radius: 5px;
+}
+.close-svg:hover {
+  background: var(--color3);
+}
+.tab.has-reload-button {
+  padding-left: 5px;
+}
+.tab.has-reload-button .name {
+  line-height: 20px;
+}
+.tab .reload-button {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  margin-right: 5px;
+  opacity: 1;
+}
+.tab:not(.active):not(.tab-dragging) .reload-button {
+  opacity: 0.5;
+}
+.tab:not(.active):hover .reload-button {
+  opacity: 1;
+}
+.tab .reload-button svg path {
+  stroke-width: 2px;
+  stroke: var(--highlight);
+}
+.tab .reload-button:hover {
+  background: var(--color3);
+  opacity: 1;
+}
+.tab:first-of-type:not(.active)::after,
+.tab:not(.active):not(.prev-active)::before {
+  background: color-mix(in srgb, var(--editorText) 10%, transparent);
+}
+.tab:not(.active):not(.prev-active)::before {
+  margin-right: -1px;
+}
+.tab:first-of-type:not(.active)::after {
+  margin-left: -2px;
+}
+
+/* editor, toolbar, statusbar, menu, settings */
+#editor {
+  margin-top: 35px;
+  border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+}
+#toolbar,
+#menu-button,
+#add-tab,
+.window-button {
+  background: var(--color1);
+}
+#status-bar {
+  color: var(--shadow);
+  border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+}
+#status-left,
+#status-right {
+  margin-top: -1px;
+}
+#settings-menu {
+  border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+}
+#settings-menu h1 {
+  color: var(--shadow);
+  opacity: 1;
+}
+.clear-recent-btn {
+  color: var(--warn) !important;
+}
+.size-change-btn {
+  width: 25px;
+  height: 25px;
+  border-radius: 5px;
+  margin: 0;
+}
+
+/* syntax, disclaimer, description */
+.sub-text,
+#disclaimer,
+#customThemeDescription {
+  color: var(--shadow);
+  opacity: 1;
+}
+#customThemeDescription a {
+  color: color-mix(in srgb, var(--highlight) 75%, transparent) !important;
+}

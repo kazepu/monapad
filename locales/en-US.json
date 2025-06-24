@@ -1,0 +1,80 @@
+{
+  "file": {
+    "untitled": "Untitled"
+  },
+  "statusBar": {
+    "line": "Ln",
+    "col": "Col",
+    "selection": "({{count}} selected)"
+  },
+  "menu": {
+    "new": "New",
+    "newWindow": "New Window",
+    "open": "Open",
+    "openRecent": "Open Recent",
+    "clearHistory": "Clear Recently Opened",
+    "save": "Save",
+    "saveAs": "Save As",
+    "find": "Find",
+    "replace": "Replace",
+    "print": "Print",
+    "settings": "Settings",
+    "theme": "Theme",
+    "statusBar": "Status Bar",
+    "about": "About",
+    "onyx": "Onyx",
+    "dark": "Dark",
+    "ash": "Ash"
+  },
+  "message": {
+    "saved": "Saved",
+    "fileAlreadyOpened": "File already opened!",
+    "fileUpdated": "File updated with external changes",
+    "fileModified": "File modified externally!"
+  },
+  "editorMenu": {
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "undo": "Undo",
+    "redo": "Redo",
+    "selectAll": "Select All",
+    "wordWrap": "Word Wrap",
+    "markdownMode": "Markdown Mode"
+  },
+  "tabMenu": {
+    "close": "Close",
+    "closeOthers": "Close Others",
+    "closeToRight": "Close to the Right",
+    "closeSaved": "Close Saved",
+    "copyPath": "Copy Path",
+    "openPath": "Open Path"
+  },
+  "settings": {
+    "font": "Font",
+    "size": "Size",
+    "layout": "Editor",
+    "highlightLine": "Highlight current line",
+    "lineNumbers": "Display line numbers",
+    "displayMinimap": "Display minimap",
+    "syntaxHighlight": "Syntax highlight",
+    "tabSize": "Tab Size",
+    "language": "Language",
+    "customTheme": "Custom Theme",
+    "openThemeFolder": "Open Theme Folder",
+    "customThemeDescription": "You can apply custom themes by creating CSS files in this folder.<br />See the <a href=\"https://github.com/sheetau/monapad\" target=\"_blank\">GitHub page</a> for details."
+  },
+  "modal": {
+    "fileDrop": "Open with Monapad",
+    "saveChanges": "Save changes to \"{{name}}\"?",
+    "confirmSave": "Save",
+    "dontSave": "Don't Save",
+    "cancel": "Cancel",
+    "confirmSaveWindow": "Do you want to save the changes?",
+    "saveAll": "Save All & Exit",
+    "discardAll": "Discard & Exit",
+    "description": "This is a free text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.",
+    "discordServer": "Discord Server:",
+    "creator": "Sheeta (Creator):"
+  }
+}

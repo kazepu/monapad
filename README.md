@@ -13,19 +13,24 @@
 Monapad is a modern text editor designed for efficient editing and readability, built on the Monaco Editor — the same core editor used in Visual Studio Code. Its key features include:
 
 - A clean, modern dark theme-only interface for distraction-free writing.
-- Smooth and responsive tab management, similar to the Chromium browser experience.
+- Smooth and responsive tab management, just like Chromium browser experience.
 - Supports many of the same keyboard shortcuts and functionalities as VSCode.
-- Special line formatting:
+- Special text formatting:
   - Lines starting with `# ` and `## ` are highlighted.
   - Lines starting with `-# ` are shown in gray.
-  - Lines starting with `- ` have their dash character highlighted.
+  - Lines starting with `- `, `* `, `+ ` and `Num. ` have their marker highlighted.
+  - Lines starting with `> ` are shown in _italic_.
+  - Text wrapped in single backticks `` `code` `` is highlighted as inline code.
+  - Text wrapped in triple backticks ``` is highlighted as a code block.
+- Supports [Custome CSS and Themes](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md)
 - Syntax highlighting for Markdown.
 
 Standard text editors can become hard to read when handling large documents, as all text often appears in the same color. Monapad was created to solve this by offering lightweight highlight features without fully relying on Markdown formatting. It also allows users to use familiar VSCode-style shortcuts and editing features.
 
 The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting its purpose: a simple yet powerful editing experience. With support for text search and replace, multi-cursor editing, and essential editing operations, Monapad brings the familiarity of VSCode into a streamlined package.
 
-![Screenshot Dark](screenshots/monapad_ss3.png?raw=true "Dark")
+![Screenshot Dark](screenshots/monapad_ss_dark.png?raw=true "Dark")
+![Screenshot Ayu](screenshots/monapad_ss_ayu.png?raw=true "Ayu")
 
 ## Shortcuts:
 
@@ -57,16 +62,19 @@ Feel free to review the source code since it is 100% open sourced.
 
 ## Contributing:
 
-Report bugs or submit feature requests [here](https://github.com/sheetau/monapad/issues).  
-If you like my work, please consider:
-
-- Star this project on GitHub
-- [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/sheeta)
-
-Join [my discord server](https://discord.gg/2dXs5HwXuW) to stay tuned.
+- [Submit your custome themes](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md)
+- [Internationalization and localization](https://github.com/sheetau/monapad/blob/main/LANGUAGE.md)
+- Report bugs or submit feature requests [here](https://github.com/sheetau/monapad/issues).
+- If you like my work, please consider:
+  - Star this project on GitHub
+  - [![ko-fi](https://www.ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/sheeta)
 
 ## Dependencies and References:
 
 - [Electron Builder](https://github.com/electron-userland/electron-builder)
 - [Webpack](https://github.com/webpack/webpack)
 - [Monaco Editor](https://github.com/microsoft/monaco-editor)
+
+## Stay tuned 📢:
+
+[Sheeta's Discord Server](https://discord.gg/2dXs5HwXuW)

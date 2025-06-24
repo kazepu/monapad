@@ -16,6 +16,7 @@ out/
 
 # VSCode
 .vscode/
+.history/
 
 # Env files
 .env
