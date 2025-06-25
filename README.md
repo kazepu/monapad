@@ -15,7 +15,7 @@ Monapad is a modern text editor designed for efficient editing and readability, 
 - A clean, modern dark theme-only interface for distraction-free writing.
 - Smooth and responsive tab management, just like Chromium browser experience.
 - Supports many of the same keyboard shortcuts and functionalities as VSCode.
-- Special text highlighting:
+- Special syntax highlighting:
   - Lines starting with `# ` and `## ` are highlighted.
   - Lines starting with `-# ` are shown in gray.
   - Lines starting with `- `, `* `, `+ ` and `Num. ` have their marker highlighted.
