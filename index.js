@@ -1,5 +1,7 @@
 import * as monaco from "monaco-editor";
+import i18next from "i18next";
 
+const tabsContainer = document.getElementById("tabs-container");
 const tabs = document.getElementById("tabs");
 const editor = document.getElementById("editor");
 const addTabButton = document.getElementById("add-tab");
@@ -9,7 +11,6 @@ const changeThemeBtn = document.getElementById("changeTheme");
 const themeMenu = document.getElementById("theme-menu");
 const openRecentBtn = document.getElementById("openRecent");
 const recentMenu = document.getElementById("recent-menu");
-const themeButtons = themeMenu.querySelectorAll("button");
 const newWindowBtn = document.getElementById("newWindowBtn");
 const newTabBtn = document.getElementById("newTabBtn");
 const fontSizeValue = document.getElementById("font-size-value");
@@ -19,11 +20,32 @@ const tabSizeValue = document.getElementById("tab-size-value");
 const tabSizeDecrease = document.getElementById("tab-size-decrease");
 const tabSizeIncrease = document.getElementById("tab-size-increase");
 const fontFamilySelect = document.getElementById("font-family-select");
-const fontLayoutButton = document.getElementById("font-layout");
-const fontLayoutMenu = document.getElementById("font-layout-menu");
+const settingsButton = document.getElementById("settingsBtn");
+const settingsMenu = document.getElementById("settings-menu");
 const customContextMenu = document.getElementById("custom-context-menu");
 const tabContextMenu = document.getElementById("tab-context-menu");
 const excludedIds = ["changeTheme", "openRecent"]; // buttons that dont close menu on click
+
+// status bar
+const statusLeft = document.getElementById("status-left");
+const lineColEl = document.getElementById("line-col");
+const zoomLevelEl = document.getElementById("zoom-level");
+const lineEndingEl = document.getElementById("line-ending");
+const encodingEl = document.getElementById("encoding");
+
+// modals
+const confirmBox = document.getElementById("confirm-save-background");
+const confirmSave = document.getElementById("confirm-save");
+const yesBtn = document.getElementById("confirm-save-yes");
+const noBtn = document.getElementById("confirm-save-no");
+const cancelBtn = document.getElementById("confirm-save-cancel");
+const confirmWindow = document.getElementById("confirm-save-window");
+const saveAllBtn = document.getElementById("confirm-save-all");
+const discardAllBtn = document.getElementById("confirm-discard-all");
+const cancelAllBtn = document.getElementById("confirm-cancel-all");
+const about = document.getElementById("about");
+const fileDropBox = document.getElementById("file-drop-background");
+const fileDrop = document.getElementById("file-drop");
 
 const STORAGE_KEY = "monacoFontSizePersistent";
 let persistentFontSize = Number(localStorage.getItem(STORAGE_KEY)) || 16;
@@ -40,52 +62,322 @@ let currentTab = { content: "", selection: null, fontSize: persistentFontSize };
 let tabData = [];
 let statusBarVisible = localStorage.getItem("statusBarVisible") !== "false";
 let currentTheme = localStorage.getItem("theme") || "dark";
-let currentFilePath = "Untitled.txt";
-const defaultSettings = { lineHighlight: true, lineNumbers: false };
+let currentFilePath = `${i18next.t("file.untitled")}.txt`;
+const defaultSettings = {
+  lineHighlight: true,
+  lineNumbers: false,
+  minimap: true,
+  syntaxHighlight: true,
+};
 const settings = JSON.parse(localStorage.getItem("editorSettings")) || defaultSettings;
 let selectedFontFamily = localStorage.getItem("selectedFontFamily") || "Figtree";
 let monacoEditor = null;
 
+// tabs hover state, width handling
+let tabAreaHovered = false;
+let fixedTabsWidth = null;
+let isHoveringLastTab = false;
+let mouseX = 0;
+let mouseY = 0;
+
 // editor context menu
 let isWordWrapOn = true;
 let isMarkdownOn = false;
+
+// modal display state
+let isModalDisplayed = false;
 
 // store right clicked tab
 let rightClickedTab = null;
 
 // watch only active tab, remove old watcher when tab switched (switchTab)
 let currentWatcher = null;
+// watch css file used as current theme
+let currentWatchedCssFile = null;
 
 // app version
 window.electronAPI.getAppVersion().then((version) => {
   document.querySelector("#version-text").textContent = `v${version}`;
 });
 
-// get css variable
-function getCSSVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const langSwitcher = document.getElementById("langSwitcher");
+const savedLang = localStorage.getItem("lang") || "en";
+langSwitcher.value = savedLang;
+
+// language
+i18next
+  .init({
+    lng: savedLang,
+    fallbackLng: "en",
+    // git pull required when additional language PR merged in github.
+    // mayb switch to i18next-fs-backend in the future
+    resources: {
+      en: { translation: require("./locales/en-US.json") },
+      ja: { translation: require("./locales/ja-JP.json") },
+    },
+  })
+  .then(() => {
+    updateMenuLabels();
+  });
+
+function updateMenuLabels() {
+  // menu
+  document.querySelector("#newTabBtn .label").textContent = i18next.t("menu.new");
+  document.querySelector("#newWindowBtn .label").textContent = i18next.t("menu.newWindow");
+  document.querySelector("#openFileBtn .label").textContent = i18next.t("menu.open");
+  document.querySelector("#openRecent .btn-text").textContent = i18next.t("menu.openRecent");
+  document.querySelector("#saveFileBtn .label").textContent = i18next.t("menu.save");
+  document.querySelector("#saveAsFileBtn .label").textContent = i18next.t("menu.saveAs");
+  document.querySelector("#triggerFindBtn .label").textContent = i18next.t("menu.find");
+  document.querySelector("#triggerReplaceBtn .label").textContent = i18next.t("menu.replace");
+  document.getElementById("print-button").textContent = i18next.t("menu.print");
+  document.querySelector("#changeTheme .btn-text").textContent = i18next.t("menu.theme");
+  document.querySelector("#toggleStatusBar .btn-text").textContent = i18next.t("menu.statusBar");
+  document.getElementById("settingsBtn").textContent = i18next.t("menu.settings");
+  document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
+  document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
+  document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
+  document.querySelector('button[data-theme="onyx"] span').textContent = i18next.t("menu.onyx");
+  document.querySelector('button[data-theme="dark"] span').textContent = i18next.t("menu.dark");
+  document.querySelector('button[data-theme="ash"] span').textContent = i18next.t("menu.ash");
+
+  // message
+  document.getElementById("file-saved").textContent = i18next.t("message.saved");
+  document.getElementById("file-opened").textContent = i18next.t("message.fileAlreadyOpened");
+  document.getElementById("file-updated").textContent = i18next.t("message.fileUpdated");
+  document.getElementById("file-modified").textContent = i18next.t("message.fileModified");
+
+  // editor context menu
+  document.querySelector('button[data-action="cut"] .label').textContent = i18next.t("editorMenu.cut");
+  document.querySelector('button[data-action="copy"] .label').textContent = i18next.t("editorMenu.copy");
+  document.querySelector('button[data-action="paste"] .label').textContent = i18next.t("editorMenu.paste");
+  document.querySelector('button[data-action="undo"] .label').textContent = i18next.t("editorMenu.undo");
+  document.querySelector('button[data-action="redo"] .label').textContent = i18next.t("editorMenu.redo");
+  document.querySelector('button[data-action="selectAll"] .label').textContent = i18next.t("editorMenu.selectAll");
+  document.querySelector('button[data-action="wordWrap"] span').textContent = i18next.t("editorMenu.wordWrap");
+  document.querySelector('button[data-action="toggleMarkdown"] span').textContent =
+    i18next.t("editorMenu.markdownMode");
+
+  // tab context menu
+  document.querySelector('button[data-action="close"] .label').textContent = i18next.t("tabMenu.close");
+  document.querySelector('button[data-action="closeOthers"] .label').textContent = i18next.t("tabMenu.closeOthers");
+  document.querySelector('button[data-action="closeToRight"] .label').textContent = i18next.t("tabMenu.closeToRight");
+  document.querySelector('button[data-action="closeSaved"] .label').textContent = i18next.t("tabMenu.closeSaved");
+  document.querySelector('button[data-action="copyPath"] .label').textContent = i18next.t("tabMenu.copyPath");
+  document.querySelector('button[data-action="openPath"] .label').textContent = i18next.t("tabMenu.openPath");
+
+  // settings
+  document.querySelector("#settings-menu .font").textContent = i18next.t("settings.font");
+  document.querySelector("#settings-menu .size").textContent = i18next.t("settings.size");
+  document.getElementById("fontDescription").innerHTML = i18next.t("settings.fontDescription");
+  document.getElementById("settingsLayout").textContent = i18next.t("settings.layout");
+  document.querySelector("#line-highlight span").textContent = i18next.t("settings.highlightLine");
+  document.querySelector("#line-num span").textContent = i18next.t("settings.lineNumbers");
+  document.querySelector("#minimap span").textContent = i18next.t("settings.displayMinimap");
+  document.querySelector("#toggleSyntaxHighlight span").textContent = i18next.t("settings.syntaxHighlight");
+  document.querySelector("#settings-menu .tabSize").textContent = i18next.t("settings.tabSize");
+  document.getElementById("settingsLanguage").textContent = i18next.t("settings.language");
+  document.getElementById("langDescription").innerHTML = i18next.t("settings.langDescription");
+  document.getElementById("settingsCustomTheme").textContent = i18next.t("settings.customTheme");
+  document.getElementById("openThemeFolder").textContent = i18next.t("settings.openThemeFolder");
+  document.getElementById("customThemeDescription").innerHTML = i18next.t("settings.customThemeDescription");
+
+  // modal
+  document.querySelector("#file-drop p").textContent = i18next.t("modal.fileDrop");
+  document.getElementById("confirm-save-yes").textContent = i18next.t("modal.confirmSave");
+  document.getElementById("confirm-save-no").textContent = i18next.t("modal.dontSave");
+  document.getElementById("confirm-save-cancel").textContent = i18next.t("modal.cancel");
+  document.querySelector("#confirm-save-window p").textContent = i18next.t("modal.confirmSaveWindow");
+  document.getElementById("confirm-save-all").textContent = i18next.t("modal.saveAll");
+  document.getElementById("confirm-discard-all").textContent = i18next.t("modal.discardAll");
+  document.getElementById("confirm-cancel-all").textContent = i18next.t("modal.cancel");
+  document.getElementById("description").textContent = i18next.t("modal.description");
+  document.getElementById("discordServer").textContent = i18next.t("modal.discordServer");
+  document.getElementById("creator").textContent = i18next.t("modal.creator");
+  document.getElementById("disclaimer-title").textContent = i18next.t("modal.disclaimer");
 }
 
-monaco.editor.defineTheme("custom-theme", {
-  base: "vs-dark",
-  inherit: true,
-  rules: [],
-  colors: {
-    "editor.background": getCSSVar("--color1"),
-    "editor.foreground": "#ffffff",
-  },
-  insertSpaces: false,
+langSwitcher.addEventListener("change", (e) => {
+  const newLang = e.target.value;
+
+  i18next.changeLanguage(newLang).then(() => {
+    updateMenuLabels();
+    updateStatusBar();
+  });
+
+  localStorage.setItem("lang", newLang);
 });
 
+// get css variable
+// getCSSVar("--var-name"), getCSSVar("var(--color)"), getCSSVar("#ffffff") → "#ffffff"
+function getCSSVar(nameOrValue, depth = 0) {
+  // max depth to prevent infinite loop
+  if (depth > 5) return nameOrValue;
+
+  if (nameOrValue.startsWith("var(")) {
+    // getCSSVar("var(--color)") → "#ffffff"
+    const varMatch = nameOrValue.match(/^var\((--[^,\s)]+)(?:\s*,\s*[^)]+)?\)$/);
+    if (varMatch) {
+      const innerVarName = varMatch[1];
+      const resolved = getComputedStyle(document.documentElement).getPropertyValue(innerVarName).trim();
+      if (resolved && resolved !== nameOrValue) {
+        return getCSSVar(resolved, depth + 1);
+      }
+    }
+    return nameOrValue;
+  } else if (nameOrValue.startsWith("--")) {
+    // getCSSVar("--var-name") → "#ffffff"
+    const value = getComputedStyle(document.documentElement).getPropertyValue(nameOrValue).trim();
+    if (value.startsWith("var(")) {
+      return getCSSVar(value, depth + 1);
+    }
+    return value;
+  } else {
+    // getCSSVar("#ffffff") → "#ffffff"
+    return nameOrValue;
+  }
+}
+
+// get monaco editor css variable
+// getAllCSSVars("--vscode-") → editor.background:
+function getAllCSSVars(prefix = "--", fromLast = true) {
+  const result = Object.create(null);
+
+  // search from last style tag if fromLast = true;
+  const styleSheets = Array.from(document.styleSheets);
+  if (fromLast) styleSheets.reverse();
+
+  for (const sheet of styleSheets) {
+    let rules;
+    try {
+      rules = sheet.cssRules;
+    } catch {
+      continue;
+    }
+
+    // process only :root
+    const rootRule = Array.from(rules).find((rule) => rule.selectorText === ":root");
+    if (!rootRule) continue;
+
+    // search vars in :root
+    for (const name of rootRule.style) {
+      // verify beginning of var (--vscode → --vscode-editor-background)
+      if (!name.startsWith(prefix)) continue;
+      // remove prefix
+      const varName = name.slice(prefix.length);
+      let token;
+      if (prefix === "--md-") {
+        // --md-keyword → keyword.md
+        token = varName.replace(/[-_]/g, ".") + ".md";
+      } else {
+        // --vscode-editor-background → editor.background
+        token = varName.replace(/[-_]/g, ".");
+      }
+      // get original value if value was set as var
+      const value = getCSSVar(rootRule.style.getPropertyValue(name).trim());
+      result[token] = value;
+    }
+    // break with first found :root
+    break;
+  }
+
+  if (Object.keys(result).length === 0) {
+    console.warn("No :root rule with the specified prefix found.");
+  }
+
+  return result;
+}
+
+// define monapad language
+monaco.languages.register({ id: "monapad" });
+monaco.languages.setMonarchTokensProvider("monapad", {
+  tokenizer: {
+    root: [
+      [/^\s*\d+\.\s/, "number-list"], // number list e.g., 1. item
+      [/^\s*[-*+] /, "bullet-point"], // bullet points
+      [/^\s*-#\s[^#].*/, "sub-text"], // -# subtext
+      [/^\s*#\s[^#].*/, "heading-1"], // # heading
+      [/^\s*##\s[^#].*/, "heading-2"], // ## heading
+      [/^\s*###\s[^#].*/, "heading-3"], // ### heading
+      [/^\s*>\s.*/, "block-quote"], // > blockquote
+      [/```/, { token: "code-block-fence", next: "@codeblock" }], // code block
+      [/`[^`]*`/, "inline-code"], // inline code block
+    ],
+
+    codeblock: [
+      [/```/, { token: "code-block-fence", next: "@pop" }],
+      [/.*$/, "code-block-content"],
+    ],
+  },
+});
+
+// apply colors to monaco editor
+function createCustomTheme() {
+  const isDefaultTheme = ["dark", "onyx", "ash"].includes(currentTheme);
+
+  // vscode css vars
+  const colors = Object.create(null);
+  // isDefaultTheme: search first style tag, !isDefaultTheme: search last style tag
+  const vscodeVars = isDefaultTheme ? getAllCSSVars("--vscode-", false) : getAllCSSVars("--vscode-", true);
+  // --vscode-editor-background: #hex / var(--color) → editor.background = #hex
+  Object.entries(vscodeVars).forEach(([token, value]) => {
+    colors[token] = value;
+  });
+
+  // monapad, markdown css vars
+  const rules = [];
+
+  if (settings.syntaxHighlight) {
+    function makeRule(token, colorVarBase) {
+      return {
+        token,
+        foreground: getCSSVar(`--${colorVarBase}`),
+        fontStyle: `${getCSSVar(`--${colorVarBase}Style`)}`.trim() || undefined,
+      };
+    }
+
+    rules.push(
+      makeRule("number-list", "numberList"),
+      makeRule("bullet-point", "bulletPoint"),
+      makeRule("sub-text", "subText"),
+      makeRule("heading-1", "heading1"),
+      makeRule("heading-2", "heading2"),
+      makeRule("heading-3", "heading3"),
+      makeRule("block-quote", "blockQuote"),
+      makeRule("inline-code", "inlineCode"),
+      makeRule("code-block-fence", "codeBlockFence"),
+      makeRule("code-block-content", "codeBlock")
+    );
+  }
+
+  if (!isDefaultTheme) {
+    // search last style tag since default theme doesn't specify markdwon color
+    const markdownVars = getAllCSSVars("--md-", true);
+    // --strong-md: #hex / var(--color) → { token: "strong.md", foreground: #hex },
+    const markdownRules = Object.entries(markdownVars).map(([token, value]) => ({ token, foreground: value }));
+    rules.push(...markdownRules);
+  }
+
+  return {
+    base: "vs-dark",
+    inherit: true,
+    rules,
+    colors,
+    insertSpaces: false,
+  };
+}
+monaco.editor.defineTheme("custom-theme", createCustomTheme());
+
 monacoEditor = monaco.editor.create(editor, {
-  language: "plaintext",
-  wordWrap: "on",
-  minimap: { enabled: false },
+  language: "monapad",
+  wordWrap: "bounded",
+  wordWrapColumn: 1000,
+  minimap: { enabled: settings.minimap, renderCharacters: true },
   fontSize: persistentFontSize,
   renderLineHighlight: settings.lineHighlight ? "line" : "none",
   lineNumbers: settings.lineNumbers ? "on" : "off",
   folding: false,
-  lineNumbersMinChars: settings.lineNumbers ? 5 : 2,
+  lineNumbersMinChars: settings.lineNumbers ? 4 : 2,
   automaticLayout: true,
   scrollBeyondLastLine: false,
   padding: { top: 12, bottom: editor.clientHeight / 2 },
@@ -95,7 +387,7 @@ monacoEditor = monaco.editor.create(editor, {
   suggestOnTriggerCharacters: false,
   wordBasedSuggestions: false,
   matchBrackets: "never",
-  fontFamily: `"${selectedFontFamily}", "Meiryo", "Noto Sans JP", "Segoe UI", "sans-serif"`,
+  fontFamily: `"${selectedFontFamily}", "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif`,
   unicodeHighlight: {
     nonBasicASCII: false,
     ambiguousCharacters: false,
@@ -109,6 +401,7 @@ monacoEditor = monaco.editor.create(editor, {
   find: {
     addExtraSpaceOnTop: false,
   },
+  scrollbar: { horizontal: "hidden" },
 });
 
 // # and -#
@@ -118,46 +411,58 @@ function applyDecorations() {
   const model = monacoEditor.getModel();
   if (!model) return;
 
+  if (!settings.syntaxHighlight) {
+    currentDecorations = monacoEditor.deltaDecorations(currentDecorations, []);
+    return;
+  }
+
   const fullText = model.getValue();
   const lines = fullText.split("\n");
-
   const decorations = [];
 
-  if (model.getLanguageId() !== "plaintext") {
+  if (model.getLanguageId() !== "monapad") {
     currentDecorations = monacoEditor.deltaDecorations(currentDecorations, []);
     return;
   }
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-
     const trimmed = line.trimStart();
-    if (trimmed.startsWith("- ")) {
-      const leadingSpaces = line.length - trimmed.length;
-      const dashIndex = leadingSpaces + 1;
+    const leadingSpaces = line.length - trimmed.length;
 
-      decorations.push({
-        range: new monaco.Range(i + 1, leadingSpaces + 1, i + 1, dashIndex + 1),
-        options: { inlineClassName: "dash-marker" },
-      });
-    } else if (line.startsWith("-# ")) {
-      decorations.push({
-        range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
-        options: { inlineClassName: "gray-text" },
-      });
-    } else if (line.startsWith("## ")) {
-      decorations.push({
-        range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
-        options: { inlineClassName: "heading-2" },
-      });
-    } else if (line.startsWith("# ")) {
-      decorations.push({
-        range: new monaco.Range(i + 1, 1, i + 1, line.length + 1),
-        options: { inlineClassName: "heading" },
-      });
+    const matchers = [
+      { regex: /^#\s[^#]/, className: "heading-1" }, // heading 1
+      { regex: /^##\s[^#]/, className: "heading-2" }, // heading 2
+      { regex: /^###\s[^#]/, className: "heading-3" }, // heading 3
+      { regex: /^-#\s[^#]/, className: "sub-text" }, // sub text
+      { regex: /^>\s/, className: "block-quote" }, // block quote
+    ];
+
+    for (const { regex, className } of matchers) {
+      const match = trimmed.match(regex);
+      if (match) {
+        const markerLength = match[0].length;
+        const startColumn = leadingSpaces + 1;
+        const endColumn = startColumn + markerLength - 1;
+
+        // always apply marker-transparent to leading marker
+        decorations.push({
+          range: new monaco.Range(i + 1, startColumn, i + 1, endColumn),
+          options: { inlineClassName: "marker-transparent" },
+        });
+
+        // only apply sub-text class to the full line if sub-text matched
+        if (className === "sub-text") {
+          decorations.push({
+            range: new monaco.Range(i + 1, startColumn, i + 1, line.length + 1),
+            options: { inlineClassName: "sub-text" },
+          });
+        }
+
+        break; // first match only
+      }
     }
   }
-
   currentDecorations = monacoEditor.deltaDecorations(currentDecorations, decorations);
 }
 
@@ -169,24 +474,23 @@ monacoEditor.onDidChangeModelContent(() => {
   const currentContent = monacoEditor.getValue();
   active.content = currentContent;
 
+  // use active._ignoreUnsavedCheck = ture before monacoEditor.getValue() when this process is unnecessary
   if (active._ignoreUnsavedCheck) {
     active._ignoreUnsavedCheck = false;
     return;
   }
 
   const hasUnsavedChanges = currentContent.trim() !== (active.originalContent || "").trim();
-  active.unsavedIndicator = !hasUnsavedChanges;
+  active.isFileSaved = !hasUnsavedChanges;
 
   // display unsaved dot
   const close = active.element.querySelector(".close");
-  const nameSpan = active.element.querySelector(".name");
   if (close) {
     if (hasUnsavedChanges) {
       close.classList.add("show-unsaved");
     } else {
       close.classList.remove("show-unsaved");
     }
-    nameSpan.style.maxWidth = "calc(100% - 15px)";
   }
 
   updateStatusBar();
@@ -194,17 +498,12 @@ monacoEditor.onDidChangeModelContent(() => {
 });
 applyDecorations();
 
-// font family
-const fontMap = new Map();
-const defaultFonts = ["Meiryo", "sans-serif", "monospace", "Consolas", "Courier New"];
-
 // get font using font-list and apply on launch
 window.electronAPI.getFonts().then((fonts) => {
   const cleanedFonts = fonts.map((f) => f.trim().replace(/^"|"$/g, ""));
-  const allFontsSet = new Set([...cleanedFonts, ...defaultFonts]);
-  const allFonts = Array.from(allFontsSet).sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+  const sortedFonts = cleanedFonts.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
-  allFonts.forEach((fontName) => {
+  sortedFonts.forEach((fontName) => {
     const option = document.createElement("option");
     option.value = fontName;
     option.textContent = fontName;
@@ -229,18 +528,29 @@ function applyFontToMonaco() {
     cleanFontFamily = cleanFontFamily.slice(1, -1);
   }
   monacoEditor.updateOptions({
-    fontFamily: `${cleanFontFamily}, "Meiryo", "Noto Sans JP", "Segoe UI", "sans-serif"`,
+    fontFamily: `${cleanFontFamily}, "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif`,
   });
 }
 
-// layout
+// editor layout
 function applySettings() {
   monacoEditor.updateOptions({
     renderLineHighlight: settings.lineHighlight ? "line" : "none",
     lineNumbers: settings.lineNumbers ? "on" : "off",
+    lineNumbersMinChars: settings.lineNumbers ? 4 : 2,
+    minimap: {
+      enabled: settings.minimap,
+    },
   });
-  document.querySelector("#line-highlight .checkmark").style.display = settings.lineHighlight ? "inline" : "none";
+
+  document.querySelector("#line-highlight .checkmark").style.display = settings.lineHighlight ? "inline-block" : "none";
   document.querySelector("#line-num .checkmark").style.display = settings.lineNumbers ? "inline-block" : "none";
+  document
+    .querySelector("#minimap .checkmark")
+    ?.style?.setProperty("display", settings.minimap ? "inline-block" : "none");
+  document.querySelector("#toggleSyntaxHighlight .checkmark").style.display = settings.syntaxHighlight
+    ? "inline-block"
+    : "none";
 }
 
 function toggleSetting(key) {
@@ -252,6 +562,25 @@ function toggleSetting(key) {
 applySettings();
 document.getElementById("line-highlight").onclick = () => toggleSetting("lineHighlight");
 document.getElementById("line-num").onclick = () => toggleSetting("lineNumbers");
+document.getElementById("minimap").onclick = () => toggleSetting("minimap");
+document.getElementById("toggleSyntaxHighlight").onclick = () => {
+  toggleSetting("syntaxHighlight");
+  monaco.editor.defineTheme("custom-theme", createCustomTheme());
+  monaco.editor.setTheme("custom-theme");
+  applyDecorations();
+};
+
+// open custom theme button
+document.getElementById("openThemeFolder").addEventListener("click", async () => {
+  try {
+    const userDataPath = await window.electronAPI.getUserDataPath();
+    const themeFolderPath = `${userDataPath}/themes`;
+    await window.electronAPI.openPath(themeFolderPath);
+    console.log("themes path opened:", themeFolderPath);
+  } catch (err) {
+    console.error("Failed to open path:", err);
+  }
+});
 
 // font size button event
 // font size on launch
@@ -269,11 +598,8 @@ function updatePersistentFontSize(newSize) {
   fontSize = persistentFontSize;
   monacoEditor.updateOptions({ fontSize: persistentFontSize });
 
-  fontSizeDecrease.style.opacity = persistentFontSize <= 8 ? "0.25" : "1";
-  fontSizeDecrease.style.pointerEvents = persistentFontSize <= 8 ? "none" : "auto";
-
-  fontSizeIncrease.style.opacity = persistentFontSize >= 40 ? "0.25" : "1";
-  fontSizeIncrease.style.pointerEvents = persistentFontSize >= 40 ? "none" : "auto";
+  fontSizeDecrease.classList.toggle("disabled", persistentFontSize <= 8);
+  fontSizeIncrease.classList.toggle("disabled", persistentFontSize >= 40);
 
   updateStatusBar?.();
 }
@@ -296,10 +622,8 @@ function updateTabSize(newSize) {
   localStorage.setItem("tabSize", tabSize);
   monacoEditor.updateOptions({ tabSize });
 
-  tabSizeDecrease.style.opacity = tabSize <= 1 ? "0.25" : "1";
-  tabSizeDecrease.style.pointerEvents = tabSize <= 1 ? "none" : "auto";
-  tabSizeIncrease.style.opacity = tabSize >= 10 ? "0.25" : "1";
-  tabSizeIncrease.style.pointerEvents = tabSize >= 10 ? "none" : "auto";
+  tabSizeDecrease.classList.toggle("disabled", tabSize <= 1);
+  tabSizeIncrease.classList.toggle("disabled", tabSize >= 10);
 
   updateStatusBar?.();
 }
@@ -348,17 +672,6 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// update padding on resize
-window.addEventListener("resize", () => {
-  const editorHeight = editor.clientHeight;
-  monacoEditor.updateOptions({
-    padding: {
-      top: 12,
-      bottom: editor.clientHeight / 2,
-    },
-  });
-});
-
 // initial editor theme
 monaco.editor.setTheme("custom-theme");
 
@@ -390,8 +703,8 @@ setTimeout(() => monacoEditor?.focus(), 0);
 // menu button
 menuButton.onclick = (e) => {
   e.stopPropagation();
-  document.getElementById("custom-context-menu").style.display = "none";
-  document.getElementById("tab-context-menu").style.display = "none";
+  customContextMenu.style.display = "none";
+  tabContextMenu.style.display = "none";
   rightClickedTab = null;
   const isOpen = menu.style.display === "block";
   menu.style.display = isOpen ? "none" : "block";
@@ -461,10 +774,27 @@ function updateMenuPositions() {
   const changeBtnRect = changeThemeBtn.getBoundingClientRect();
   const recentBtnRect = openRecentBtn.getBoundingClientRect();
 
-  themeMenu.style.top = `${changeBtnRect.top - 5}px`;
-  recentMenu.style.top = `${recentBtnRect.top - 5}px`;
+  const topTheme = changeBtnRect.top - 5;
+  const topRecent = recentBtnRect.top - 5;
+
+  themeMenu.style.top = `${topTheme}px`;
+  themeMenu.style.maxHeight = `${window.innerHeight - topTheme}px`;
+
+  recentMenu.style.top = `${topRecent}px`;
+  recentMenu.style.maxHeight = `${window.innerHeight - topRecent}px`;
 }
-window.addEventListener("resize", updateMenuPositions);
+window.addEventListener("resize", () => {
+  updateMenuPositions();
+
+  // update editor padding
+  const editorHeight = editor.clientHeight;
+  monacoEditor.updateOptions({
+    padding: {
+      top: 12,
+      bottom: editor.clientHeight / 2,
+    },
+  });
+});
 window.addEventListener("wheel", updateMenuPositions, { passive: true });
 
 // recent menu display
@@ -511,8 +841,66 @@ themeMenu.addEventListener("mouseleave", () => {
   }, 100);
 });
 
-function applyTheme(theme) {
+async function applyCustomThemeCSS(themeName) {
+  const themes = await window.electronAPI.getCustomThemes();
+  const filePath = themes[themeName];
+
+  if (currentWatchedCssFile && currentWatchedCssFile !== filePath) {
+    window.electronAPI.unwatchCssFile(currentWatchedCssFile);
+  }
+
+  if (filePath) {
+    try {
+      const cssContent = await window.electronAPI.readCssFile(filePath);
+      if (cssContent) {
+        const existingStyle = document.getElementById("custom-theme-style");
+        if (existingStyle) existingStyle.remove();
+
+        const styleTag = document.createElement("style");
+        styleTag.id = "custom-theme-style";
+        styleTag.textContent = cssContent;
+        document.head.appendChild(styleTag);
+
+        currentWatchedCssFile = filePath;
+        window.electronAPI.watchCssFile(filePath); // start watching file
+
+        return true;
+      }
+    } catch (error) {
+      console.error("Failed to apply custom theme:", error);
+    }
+  }
+
+  console.log("Theme not found:", themeName);
+  return false;
+}
+
+async function applyTheme(theme) {
+  const themes = await window.electronAPI.getCustomThemes();
+
+  // set to dark if custom theme file doesn't exist
+  if (!["dark", "onyx", "ash"].includes(theme) && !themes[theme]) {
+    theme = "dark";
+    currentTheme = "dark";
+    localStorage.setItem("theme", theme);
+  }
+
+  // override with custom theme if selected
+  if (!["dark", "onyx", "ash"].includes(theme)) {
+    const success = await applyCustomThemeCSS(theme);
+    if (!success) {
+      return;
+    }
+  } else {
+    // delete style tag
+    const existingStyle = document.getElementById("custom-theme-style");
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+  }
+
   const root = document.documentElement;
+
   if (theme === "dark") {
     root.style.setProperty("--color1", "#121214");
     root.style.setProperty("--color2", "#1a1a1e");
@@ -527,35 +915,87 @@ function applyTheme(theme) {
     root.style.setProperty("--color3", "#484950");
   }
 
-  monaco.editor.defineTheme("custom-theme", {
-    base: "vs-dark",
-    inherit: true,
-    rules: [],
-    colors: {
-      "editor.background": getCSSVar("--color1"),
-      "editor.foreground": "#ffffff",
-    },
-  });
+  monaco.editor.defineTheme("custom-theme", createCustomTheme());
   monaco.editor.setTheme("custom-theme");
 }
 
 // theme button click & update button checkmark
 function updateActiveButton() {
-  themeButtons.forEach((btn) => {
+  const allThemeButtons = themeMenu.querySelectorAll("button[data-theme]");
+  allThemeButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.getAttribute("data-theme") === currentTheme);
   });
 }
-themeButtons.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const theme = btn.getAttribute("data-theme");
-    currentTheme = theme;
-    localStorage.setItem("theme", theme);
-    applyTheme(theme);
-    updateActiveButton();
+
+// theme button click event
+function attachThemeButtonEvents() {
+  const allThemeButtons = themeMenu.querySelectorAll("button[data-theme]");
+  allThemeButtons.forEach((btn) => {
+    btn.removeEventListener("click", handleThemeButtonClick);
+    btn.addEventListener("click", handleThemeButtonClick);
   });
-});
-applyTheme(currentTheme);
+}
+
+async function handleThemeButtonClick(event) {
+  const theme = event.currentTarget.getAttribute("data-theme");
+  currentTheme = theme;
+  localStorage.setItem("theme", theme);
+  await applyTheme(theme);
+  updateActiveButton();
+}
+
+// load custom theme and add to menu
+async function addCustomThemesToMenu() {
+  const customThemes = await window.electronAPI.getCustomThemes();
+  const themeNames = Object.keys(customThemes);
+
+  if (themeNames.length > 0) {
+    const hr = document.createElement("div");
+    hr.className = "hr";
+    themeMenu.appendChild(hr);
+
+    themeNames.forEach((themeName) => {
+      // snake-case -> "Title Case"
+      const displayName = themeName
+        .replace(/[-_/]+/g, " ")
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(" ");
+
+      const button = document.createElement("button");
+      button.dataset.theme = themeName;
+      button.innerHTML = `<span>${displayName}</span>
+            <svg
+              class="checkmark"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 10.23 7.15"
+              style="width: 13px; height: 13px; stroke: #fff; fill: none"
+            >
+              <polyline
+                points=".5 3.58 3.58 6.65 9.73 .5"
+                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+              />
+            </svg>`;
+      themeMenu.appendChild(button);
+    });
+
+    attachThemeButtonEvents();
+    updateActiveButton();
+  }
+}
+
+await applyTheme(currentTheme);
+await addCustomThemesToMenu(); // load custom theme first
 updateActiveButton();
+attachThemeButtonEvents();
+
+// apply css file update
+window.electronAPI.onCssFileUpdated(async (path) => {
+  if (currentWatchedCssFile === path && currentTheme) {
+    console.log("Detected CSS update, reapplying theme...");
+    await applyTheme(currentTheme);
+  }
+});
 
 document.getElementById("openFileBtn").addEventListener("click", openFile);
 document.getElementById("saveFileBtn").addEventListener("click", saveFile);
@@ -565,25 +1005,21 @@ document.getElementById("toggleStatusBar").addEventListener("click", toggleStatu
 // print button
 document.getElementById("print-button").addEventListener("click", () => {
   const content = monacoEditor.getValue();
-  const fontFamily = monacoEditor.getRawOptions().fontFamily || "monospace";
+  const fontFamily = monacoEditor.getRawOptions().fontFamily || "Consolas";
   window.electronAPI.printContent({ text: content, fontFamily });
 });
 
 // about button
 document.getElementById("aboutBtn").addEventListener("click", () => {
-  const overlay = document.getElementById("confirm-save-background");
-  const about = document.getElementById("about");
-
-  overlay.style.display = "flex";
+  confirmBox.style.display = "flex";
   about.style.display = "flex";
+  isModalDisplayed = true;
 });
 
 document.getElementById("about-close").addEventListener("click", () => {
-  const overlay = document.getElementById("confirm-save-background");
-  const about = document.getElementById("about");
-
-  overlay.style.display = "none";
+  confirmBox.style.display = "none";
   about.style.display = "none";
+  isModalDisplayed = false;
 });
 
 // window controls
@@ -603,19 +1039,58 @@ document.getElementById("close-button").addEventListener("click", () => {
 addTabButton.onclick = () => {
   createTab();
   switchTab(tabData.at(-1));
-  setTimeout(() => {
-    monacoEditor.focus();
-  }, 0);
+  setTimeout(() => monacoEditor.focus(), 0);
 };
 // new tab button
 newTabBtn.addEventListener("click", (e) => {
   e.preventDefault();
   createTab();
   switchTab(tabData.at(-1));
-  setTimeout(() => {
-    monacoEditor.focus();
-  }, 0);
+  setTimeout(() => monacoEditor.focus(), 0);
 });
+
+// tabs hover state
+tabsContainer.addEventListener("mouseover", (e) => {
+  tabAreaHovered = true;
+
+  const hoveredTab = e.target.closest(".tab");
+  if (hoveredTab) {
+    const allTabs = tabs.querySelectorAll(".tab");
+    isHoveringLastTab = hoveredTab === allTabs[allTabs.length - 1];
+  } else {
+    isHoveringLastTab = false;
+  }
+});
+function handleTabsMouseLeave() {
+  tabAreaHovered = false;
+  isHoveringLastTab = false;
+  fixedTabsWidth = null;
+  tabs.style.maxWidth = "";
+}
+function isMouseInsideTabsContainer() {
+  const rect = tabsContainer.getBoundingClientRect();
+  return mouseX >= rect.left && mouseX <= rect.right && mouseY >= rect.top && mouseY <= rect.bottom;
+}
+tabsContainer.addEventListener("mouseleave", () => {
+  handleTabsMouseLeave();
+});
+// detect if cursor is in tabsContainer even without cursor movement
+document.addEventListener("mousemove", (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  if (tabAreaHovered && !isMouseInsideTabsContainer()) handleTabsMouseLeave();
+});
+// enable tabs scroll x
+tabs.addEventListener(
+  "wheel",
+  (e) => {
+    if (e.deltaY !== 0) {
+      e.preventDefault();
+      tabs.scrollLeft += e.deltaY;
+    }
+  },
+  { passive: false }
+);
 
 // new window button
 newWindowBtn.addEventListener("click", () => {
@@ -625,10 +1100,40 @@ newWindowBtn.addEventListener("click", () => {
 // file drag & drop
 window.addEventListener("dragover", (e) => {
   e.preventDefault();
+  if (isModalDisplayed) {
+    e.dataTransfer.dropEffect = "none";
+    return;
+  }
+
+  if (!e.dataTransfer.types.includes("Files")) return;
+
+  if (fileDropBox.style.display !== "flex") {
+    fileDropBox.style.display = "flex";
+    fileDrop.style.display = "flex";
+  }
+});
+
+window.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  if (isModalDisplayed) {
+    e.dataTransfer.dropEffect = "none";
+    return;
+  }
+
+  fileDropBox.style.display = "none";
+  fileDrop.style.display = "none";
 });
 
 window.addEventListener("drop", async (e) => {
   e.preventDefault();
+  if (isModalDisplayed) {
+    e.dataTransfer.dropEffect = "none";
+    return;
+  }
+
+  fileDropBox.style.display = "none";
+  fileDrop.style.display = "none";
+
   if (!e.dataTransfer.files.length) return;
 
   const file = e.dataTransfer.files[0];
@@ -636,7 +1141,7 @@ window.addEventListener("drop", async (e) => {
 
   const filePath = await window.electronAPI.getPathForFile(file);
   if (!filePath) {
-    alert("Failed to get file path.");
+    console.error("Failed to get file path.");
     return;
   }
 
@@ -654,12 +1159,12 @@ function toggleStatusBar() {
     statusBar.style.display = "flex";
     checkmark.style.display = "inline-block";
     editor.style.height = "calc(100vh - 35px - 25px)";
-    fontLayoutMenu.style.height = "calc(100vh - 35px - 25px)";
+    settingsMenu.style.height = "calc(100vh - 35px - 25px)";
   } else {
     statusBar.style.display = "none";
     checkmark.style.display = "none";
     editor.style.height = "calc(100vh - 35px)";
-    fontLayoutMenu.style.height = "calc(100vh - 35px)";
+    settingsMenu.style.height = "calc(100vh - 35px)";
   }
 
   if (monacoEditor) {
@@ -687,13 +1192,19 @@ function updateStatusBar() {
     lineEnding = "Mac (CR)";
   }
 
-  document.getElementById("status-left").textContent = currentFilePath;
-  document.getElementById("status-left").title = currentFilePath;
-  document.getElementById("line-col").textContent = `Ln ${position.lineNumber}, Col ${position.column}`;
-  document.getElementById("zoom-level").textContent = `${Math.round((fontSize / persistentFontSize) * 100)}%`;
-  document.getElementById("line-ending").textContent = lineEnding;
-  document.getElementById("encoding").textContent = currentEncoding;
-  document.getElementById("encoding").title =
+  const selectedCharCount = model.getValueLengthInRange(monacoEditor.getSelection());
+  const selectionText =
+    selectedCharCount > 0 ? ` ${i18next.t("statusBar.selection", { count: selectedCharCount })}` : "";
+
+  statusLeft.textContent = currentFilePath;
+  statusLeft.title = currentFilePath;
+  lineColEl.textContent = `${i18next.t("statusBar.line")} ${position.lineNumber}, ${i18next.t("statusBar.col")} ${
+    position.column
+  }${selectionText}`;
+  zoomLevelEl.textContent = `${Math.round((fontSize / persistentFontSize) * 100)}%`;
+  lineEndingEl.textContent = lineEnding;
+  encodingEl.textContent = currentEncoding;
+  encodingEl.title =
     "This editor supports only UTF-8.\nIf you want to use other encodings, please convert them to UTF-8 before opening.";
 }
 
@@ -706,9 +1217,12 @@ function enableTabDragging(tab, data) {
     dragIndex = tabData.indexOf(data);
     startX = e.clientX;
     currentX = 0;
-    tab.style.zIndex = "10";
     tab.style.transition = "none";
     tab.style.position = "relative";
+    tab.classList.add("tab-dragging");
+
+    monacoEditor.updateOptions({ renderLineHighlight: "none" });
+    monacoEditor.getDomNode().querySelector(".cursor").style.display = "none";
 
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
@@ -735,7 +1249,8 @@ function enableTabDragging(tab, data) {
         const oldLeft = currentRect.left;
 
         tabs.insertBefore(draggingTab, targetTab.nextSibling);
-        switchTab(currentTab);
+        monacoEditor.getDomNode()?.blur();
+        switchTab(currentTab, true);
 
         const newRect = draggingTab.getBoundingClientRect();
         const deltaX = oldLeft - newRect.left;
@@ -754,7 +1269,8 @@ function enableTabDragging(tab, data) {
         const oldLeft = currentRect.left;
 
         tabs.insertBefore(draggingTab, targetTab);
-        switchTab(currentTab);
+        monacoEditor.getDomNode()?.blur();
+        switchTab(currentTab, true);
 
         const newRect = draggingTab.getBoundingClientRect();
         const deltaX = oldLeft - newRect.left;
@@ -776,18 +1292,26 @@ function enableTabDragging(tab, data) {
     tabs.classList.remove("dragging");
     draggingTab.style.transition = "";
     draggingTab.style.transform = "";
-    draggingTab.style.zIndex = "";
     draggingTab.style.position = "";
     draggingTab.style.pointerEvents = "";
+    tab.classList.remove("tab-dragging");
     draggingTab = null;
     dragIndex = -1;
+    monacoEditor.updateOptions({ renderLineHighlight: settings.lineHighlight ? "line" : "none" });
+    monacoEditor.getDomNode().querySelector(".cursor").style.display = "";
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
   }
 }
 
 // create tab
-function createTab(name = "Untitled.txt", content = "", path = null) {
+function createTab(name, content = "", path = null) {
+  if (!name) name = `${i18next.t("file.untitled")}.txt`;
+
+  // reset tabs max width
+  fixedTabsWidth = null;
+  tabs.style.maxWidth = "";
+
   const tab = document.createElement("div");
   tab.className = "tab";
 
@@ -826,13 +1350,31 @@ function createTab(name = "Untitled.txt", content = "", path = null) {
     element: tab,
     selection: null,
     fontSize: persistentFontSize,
-    unsavedIndicator: true, // true:saved false:unsaved
+    isFileSaved: true,
   };
   tabData.push(data);
 
   close.onclick = async (e) => {
     e.stopPropagation();
+
+    if (tabAreaHovered && !isHoveringLastTab) {
+      // set current tabs width - current tab width to tabs max width before closing tab
+      const currentTabsWidth = tabs.offsetWidth;
+      const tabWidth = tab.offsetWidth;
+      fixedTabsWidth = currentTabsWidth - tabWidth;
+      tabs.style.maxWidth = fixedTabsWidth + "px";
+    } else if (tabAreaHovered && isHoveringLastTab) {
+      // keep max width when last tab is closed
+      fixedTabsWidth = tabs.offsetWidth;
+      tabs.style.maxWidth = fixedTabsWidth + "px";
+    }
+
     await attemptCloseTab(data);
+
+    // update tabscontainer client rect
+    if (tabAreaHovered && !isMouseInsideTabsContainer()) {
+      handleTabsMouseLeave();
+    }
   };
 
   tab.onclick = (e) => {
@@ -849,17 +1391,13 @@ async function attemptCloseTab(data) {
   return new Promise((resolve) => {
     const tab = data.element;
 
-    if (!data.unsavedIndicator) {
-      const confirmBox = document.getElementById("confirm-save-background");
-      const confirmSave = document.getElementById("confirm-save");
-      const message = document.querySelector("#confirm-save p");
-      const yesBtn = document.getElementById("confirm-save-yes");
-      const noBtn = document.getElementById("confirm-save-no");
-      const cancelBtn = document.getElementById("confirm-save-cancel");
+    if (!data.isFileSaved) {
+      const message = confirmSave.querySelector("p");
 
-      message.textContent = `Save changes to "${data.name}"?`;
+      message.textContent = i18next.t("modal.saveChanges", { name: data.name });
       confirmBox.style.display = "flex";
       confirmSave.style.display = "flex";
+      isModalDisplayed = true;
 
       const actuallyCloseTab = () => {
         const index = tabData.indexOf(data);
@@ -875,8 +1413,25 @@ async function attemptCloseTab(data) {
             if (monacoEditor) monacoEditor.setValue("");
             currentTab = null;
             createTab();
+
+            // reset max width when last tab is closed
+            fixedTabsWidth = null;
+            tabs.style.maxWidth = "";
+
             switchTab(tabData[0]);
             setTimeout(() => monacoEditor?.focus(), 0);
+          }
+        } else {
+          const currentActive = tabData.find((t) => t.element.classList.contains("active"));
+          if (currentActive) {
+            document.querySelectorAll(".tab").forEach((tab) => {
+              tab.classList.remove("prev-active");
+            });
+
+            const prev = currentActive.element.previousElementSibling;
+            if (prev && prev.classList.contains("tab")) {
+              prev.classList.add("prev-active");
+            }
           }
         }
       };
@@ -890,6 +1445,7 @@ async function attemptCloseTab(data) {
       const onSave = async () => {
         confirmBox.style.display = "none";
         confirmSave.style.display = "none";
+        isModalDisplayed = false;
         switchTab(data);
         let success = false;
 
@@ -912,6 +1468,7 @@ async function attemptCloseTab(data) {
       const onDontSave = () => {
         confirmBox.style.display = "none";
         confirmSave.style.display = "none";
+        isModalDisplayed = false;
         actuallyCloseTab();
         removeListeners();
         resolve("closed");
@@ -920,7 +1477,9 @@ async function attemptCloseTab(data) {
       const onCancel = () => {
         confirmBox.style.display = "none";
         confirmSave.style.display = "none";
+        isModalDisplayed = false;
         removeListeners();
+        monacoEditor?.focus();
         resolve("cancelled");
       };
 
@@ -944,8 +1503,25 @@ async function attemptCloseTab(data) {
         if (monacoEditor) monacoEditor.setValue("");
         currentTab = null;
         createTab();
+
+        // reset max width when last tab is closed
+        fixedTabsWidth = null;
+        tabs.style.maxWidth = "";
+
         switchTab(tabData[0]);
         setTimeout(() => monacoEditor?.focus(), 0);
+      }
+    } else {
+      const currentActive = tabData.find((t) => t.element.classList.contains("active"));
+      if (currentActive) {
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.classList.remove("prev-active");
+        });
+
+        const prev = currentActive.element.previousElementSibling;
+        if (prev && prev.classList.contains("tab")) {
+          prev.classList.add("prev-active");
+        }
       }
     }
 
@@ -955,21 +1531,15 @@ async function attemptCloseTab(data) {
 
 // close window
 function attemptCloseWindow() {
-  const hasUnsavedTabs = tabData.some((tab) => !tab.unsavedIndicator);
+  const hasUnsavedTabs = tabData.some((tab) => !tab.isFileSaved);
   if (!hasUnsavedTabs) {
     window.electronAPI.closeWindow();
     return;
   }
 
-  const confirmBox = document.getElementById("confirm-save-background");
-  const confirmWindow = document.getElementById("confirm-save-window");
-
-  const saveAllBtn = document.getElementById("confirm-save-all");
-  const discardAllBtn = document.getElementById("confirm-discard-all");
-  const cancelAllBtn = document.getElementById("confirm-cancel-all");
-
   confirmBox.style.display = "flex";
   confirmWindow.style.display = "flex";
+  isModalDisplayed = true;
 
   const removeListeners = () => {
     saveAllBtn.removeEventListener("click", onSaveAll);
@@ -980,6 +1550,7 @@ function attemptCloseWindow() {
   const closeConfirm = () => {
     confirmBox.style.display = "none";
     confirmWindow.style.display = "none";
+    isModalDisplayed = false;
   };
 
   const onSaveAll = async () => {
@@ -992,7 +1563,7 @@ function attemptCloseWindow() {
     for (const tab of allTabs) {
       switchTab(tab);
 
-      if (!tab.unsavedIndicator) {
+      if (!tab.isFileSaved) {
         let success = false;
         if (tab.path) {
           success = await saveFile();
@@ -1039,6 +1610,7 @@ function attemptCloseWindow() {
   const onCancelAll = () => {
     closeConfirm();
     removeListeners();
+    monacoEditor?.focus();
   };
 
   saveAllBtn.addEventListener("click", onSaveAll);
@@ -1063,9 +1635,9 @@ function switchTab(data) {
   monacoEditor.updateOptions({ fontSize });
   isWordWrapOn = data.wordWrap ?? true;
   isMarkdownOn = data.isMarkdown ?? false;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
   const model = monacoEditor.getModel();
-  monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "plaintext");
+  monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "monapad");
 
   // update tab style
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -1102,13 +1674,13 @@ function switchTab(data) {
 
   // restore WordWrap state
   isWordWrapOn = data.wordWrap ?? true;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
   const wrapBtn = document.querySelector('button[data-action="wordWrap"] svg.checkmark');
   if (wrapBtn) wrapBtn.style.display = isWordWrapOn ? "inline-block" : "none";
 
   // restore Markdown state
   isMarkdownOn = data.isMarkdown ?? false;
-  monaco.editor.setModelLanguage(monacoEditor.getModel(), isMarkdownOn ? "markdown" : "plaintext");
+  monaco.editor.setModelLanguage(monacoEditor.getModel(), isMarkdownOn ? "markdown" : "monapad");
   if (isMarkdownOn) {
     applyDecorations();
   }
@@ -1134,10 +1706,11 @@ window.electronAPI.onFileChanged((event, { filePath, eventType }) => {
 
   if (eventType === "rename") {
     // if file is not found
-    targetTab.element.querySelector(".name").style.textDecoration = "line-through";
-    targetTab.element.querySelector(".name").style.color = "#cf5d6e";
+    targetTab.element.querySelector(".name").classList.add("warn");
+    reloadButton(targetTab, null, "remove");
   } else if (eventType === "change") {
     // if file is changed
+    targetTab.element.querySelector(".name").classList.remove("warn");
     handleFileChange(targetTab, filePath);
   }
 });
@@ -1150,32 +1723,84 @@ async function handleFileChange(targetTab, filePath) {
     content = null;
   }
 
+  const nameEl = targetTab.element.querySelector(".name");
+
   if (content === null) {
-    // line-through name if file is not found
-    targetTab.element.querySelector(".name").style.textDecoration = "line-through";
-    targetTab.element.querySelector(".name").style.color = "#cf5d6e";
-  } else {
-    // remove line-through if file is found
-    targetTab.element.querySelector(".name").style.textDecoration = "";
-    targetTab.element.querySelector(".name").style.color = "white";
+    // line-through name if file is not found. remove reload button
+    nameEl.classList.add("warn");
+    reloadButton(targetTab, null, "remove");
+    return;
+  }
 
-    // update current tab content if needed
-    if (
-      targetTab === currentTab &&
-      content !== monacoEditor.getValue() &&
-      document.activeElement !== monacoEditor.getDomNode()
-    ) {
-      if (targetTab._lastExternalContent === content) return;
+  // remove line-through if file is found
+  nameEl.classList.remove("warn");
 
-      targetTab._lastExternalContent = content;
-      targetTab._ignoreUnsavedCheck = true;
-      const pos = monacoEditor.getPosition();
-      monacoEditor.setValue(content);
-      if (pos) monacoEditor.setPosition(pos);
-      targetTab.originalContent = content;
-      console.log("content updated");
-      updateStatusBar();
-    }
+  if (targetTab.isFileSaved && (content === targetTab._lastExternalContent || content === targetTab.originalContent)) {
+    reloadButton(targetTab, null, "remove");
+    return;
+  }
+
+  // if file modified externally, add reload button and let user to decide to update or not.
+  if (targetTab !== currentTab) switchTab(targetTab);
+  showMessage("file-modified");
+  console.log("handleFileChange: file modified externally. showing reload button");
+  reloadButton(targetTab, filePath, "add");
+}
+
+function applyFileContentToEditor(tab, content) {
+  tab._lastExternalContent = content;
+  tab.originalContent = content;
+  tab.isFileSaved = true;
+
+  if (tab !== currentTab) switchTab(tab);
+
+  const pos = monacoEditor.getPosition();
+  monacoEditor.setValue(content);
+  if (pos) monacoEditor.setPosition(pos);
+
+  const close = tab.element.querySelector(".close");
+  if (close) close.classList.remove("show-unsaved");
+
+  updateStatusBar();
+  applyDecorations();
+  showMessage("file-updated");
+  reloadButton(tab, null, "remove");
+  console.log("handleFileChange: content updated");
+}
+
+function reloadButton(tab, filePath, mode) {
+  const existing = tab.element.querySelector(".reload-button");
+
+  if (mode === "remove") {
+    if (existing) existing.remove();
+    tab.element.classList.remove("has-reload-button");
+    return;
+  }
+
+  if (mode === "add") {
+    if (existing) return; // already exists
+
+    const button = document.createElement("button");
+    button.classList.add("reload-button");
+    tab.element.classList.add("has-reload-button");
+    button.title = "Update file and apply external changes";
+    button.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17">
+        <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"
+          d="M16.43,9.54c-.57,4.38-4.59,7.47-8.97,6.89C3.08,15.86,0,11.84.57,7.46.99,4.22,3.34,1.57,6.51.76c3.9-1,7.94,1.01,9.43,4.75"/>
+        <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"
+          d="M16.5.5v5h-5"/>
+      </svg>
+    `;
+    button.onclick = async () => {
+      const content = await window.electronAPI.readFile(filePath);
+      if (tab !== currentTab) switchTab(tab);
+      applyFileContentToEditor(tab, content);
+      reloadButton(tab, null, "remove");
+    };
+
+    const nameEl = tab.element.querySelector(".name");
+    if (nameEl) nameEl.insertBefore(button, nameEl.firstChild);
   }
 }
 
@@ -1212,7 +1837,7 @@ async function loadFileByPath(filePath) {
   const content = await window.electronAPI.readFile(filePath);
   if (content === null || content === undefined) {
     // alert("Failed to read file.");
-    console.log("Failed to read file.");
+    console.error("Failed to read file.");
     return;
   }
 
@@ -1227,7 +1852,7 @@ async function loadFileByPath(filePath) {
       singleTab._lastExternalContent = content;
       singleTab.path = filePath;
       singleTab.originalContent = content;
-      singleTab.unsavedIndicator = true;
+      singleTab.isFileSaved = true;
       singleTab.isMarkdown = isMarkdownFile;
 
       const nameSpan = singleTab.element.querySelector(".name");
@@ -1247,7 +1872,7 @@ async function loadFileByPath(filePath) {
   const newTabData = tabData[tabData.length - 1];
   newTabData.originalContent = content;
   newTabData._lastExternalContent = content;
-  newTabData.unsavedIndicator = true;
+  newTabData.isFileSaved = true;
   newTabData.isMarkdown = isMarkdownFile;
 
   const newTabClose = newTabData.element.querySelector(".close");
@@ -1322,21 +1947,13 @@ async function populateRecentMenu() {
 
   recentMenu.innerHTML = "";
 
-  const btnText = openRecentBtn.querySelector(".btn-text");
-  const btnSvg = openRecentBtn.querySelector("svg");
-
   // disable button when no recently opened files
   if (displayEntries.length === 0) {
-    btnText.style.opacity = "0.25";
-    btnSvg.style.opacity = "0.25";
-    openRecentBtn.style.pointerEvents = "none";
+    openRecentBtn.classList.add("disabled");
     recentMenu.style.display = "none";
     return;
   }
-
-  btnText.style.opacity = "1";
-  btnSvg.style.opacity = "1";
-  openRecentBtn.style.pointerEvents = "auto";
+  openRecentBtn.classList.remove("disabled");
 
   displayEntries.forEach(({ path }) => {
     const button = document.createElement("button");
@@ -1364,7 +1981,7 @@ async function populateRecentMenu() {
   recentMenu.appendChild(hr);
 
   const clearButton = document.createElement("button");
-  clearButton.textContent = "Clear Recently Opened";
+  clearButton.textContent = i18next.t("menu.clearHistory");
   clearButton.className = "clear-recent-btn";
   clearButton.addEventListener("click", () => {
     localStorage.removeItem("recentFiles");
@@ -1389,14 +2006,15 @@ async function saveAsFile() {
     active.name = filePath.split(/[\\/]/).pop();
     active.element.querySelector(".name").textContent = active.name;
     active.originalContent = content;
-    active.unsavedIndicator = true;
+    active.isFileSaved = true;
+    active._lastExternalContent = content;
 
     currentFilePath = filePath;
     updateStatusBar();
 
     const activeClose = active.element.querySelector(".close");
     if (activeClose) activeClose.classList.remove("show-unsaved");
-
+    reloadButton(active, null, "remove");
     updateRecentFiles(filePath);
     showMessage("file-saved");
     switchTab(active);
@@ -1418,7 +2036,7 @@ async function saveFile() {
     return await saveAsFile();
   }
 
-  if (active.unsavedIndicator) {
+  if (active.isFileSaved && !active.element.querySelector(".name")?.classList.contains("warn")) {
     console.log("No changes to save.");
     return true;
   }
@@ -1430,10 +2048,12 @@ async function saveFile() {
 
     // udpate unsaved indicator when saved
     active.originalContent = content;
-    active.unsavedIndicator = true;
+    active.isFileSaved = true;
+    active._lastExternalContent = content;
 
     const activeSaveClose = active.element.querySelector(".close");
     if (activeSaveClose) activeSaveClose.classList.remove("show-unsaved");
+    reloadButton(active, null, "remove");
     showMessage("file-saved");
   } else {
     console.error("Failed to save file:", result.error);
@@ -1444,14 +2064,48 @@ async function saveFile() {
 }
 
 // file saved & file already opened message
+const messageQueue = [];
+let isShowingMessage = false;
+let isWindowFocused = true; // default is focused
+
 function showMessage(id) {
+  messageQueue.push(id);
+  if (!isShowingMessage && isWindowFocused) {
+    processQueue();
+  }
+}
+
+function processQueue() {
+  if (messageQueue.length === 0) {
+    isShowingMessage = false;
+    return;
+  }
+  if (!isWindowFocused) {
+    isShowingMessage = false; // stop process when not focused
+    return;
+  }
+  isShowingMessage = true;
+  const id = messageQueue.shift();
   const el = document.getElementById(id);
-  if (!el) return;
+  if (!el) {
+    processQueue(); // go next when no element
+    return;
+  }
   el.classList.add("show");
+  const duration = id === "file-updated" ? 2500 : 1500;
   setTimeout(() => {
     el.classList.remove("show");
-  }, 1500);
+    processQueue();
+  }, duration);
 }
+
+// get forcus state
+window.electronAPI.onWindowFocus((focused) => {
+  isWindowFocused = focused;
+  if (focused && messageQueue.length > 0 && !isShowingMessage) {
+    processQueue();
+  }
+});
 
 // Tab context menu handler
 document.addEventListener("contextmenu", (e) => {
@@ -1463,19 +2117,17 @@ document.addEventListener("contextmenu", (e) => {
   if (!rightClickedTab) return;
 
   // Hide editor context menu
-  document.getElementById("custom-context-menu").style.display = "none";
-
-  const menu = document.getElementById("tab-context-menu");
+  customContextMenu.style.display = "none";
 
   // Update copy & open path button
-  updateTabContextMenuState(menu, rightClickedTab);
+  updateTabContextMenuState(tabContextMenu, rightClickedTab);
 
   // menu position
-  menu.style.display = "block";
-  menu.style.visibility = "hidden";
+  tabContextMenu.style.display = "block";
+  tabContextMenu.style.visibility = "hidden";
 
-  const menuWidth = menu.offsetWidth;
-  const menuHeight = menu.offsetHeight;
+  const menuWidth = tabContextMenu.offsetWidth;
+  const menuHeight = tabContextMenu.offsetHeight;
   const pageWidth = window.innerWidth;
   const pageHeight = window.innerHeight;
 
@@ -1489,10 +2141,10 @@ document.addEventListener("contextmenu", (e) => {
     top = Math.max(0, pageHeight - menuHeight);
   }
 
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
-  menu.style.visibility = "visible";
-  menu.style.display = "flex";
+  tabContextMenu.style.left = `${left}px`;
+  tabContextMenu.style.top = `${top}px`;
+  tabContextMenu.style.visibility = "visible";
+  tabContextMenu.style.display = "flex";
 });
 
 // update copy & open path button based on path existance
@@ -1503,25 +2155,11 @@ function updateTabContextMenuState(menu, tab) {
   const hasPath = tab && tab.path;
 
   if (copyPathBtn) {
-    const label = copyPathBtn.querySelector(".label");
-    if (hasPath) {
-      label.style.opacity = "1";
-      copyPathBtn.style.pointerEvents = "auto";
-    } else {
-      label.style.opacity = "0.25";
-      copyPathBtn.style.pointerEvents = "none";
-    }
+    copyPathBtn.classList.toggle("disabled", !hasPath);
   }
 
   if (openPathBtn) {
-    const label = openPathBtn.querySelector(".label");
-    if (hasPath) {
-      label.style.opacity = "1";
-      openPathBtn.style.pointerEvents = "auto";
-    } else {
-      label.style.opacity = "0.25";
-      openPathBtn.style.pointerEvents = "none";
-    }
+    openPathBtn.classList.toggle("disabled", !hasPath);
   }
 }
 
@@ -1542,13 +2180,13 @@ async function closeTabsSequentially(tabsToClose) {
 }
 
 // Tab context menu click handler
-document.getElementById("tab-context-menu").addEventListener("click", async (e) => {
+tabContextMenu.addEventListener("click", async (e) => {
   const action = e.target.closest("button")?.dataset.action;
   if (!action || !rightClickedTab) return;
 
   const targetTab = rightClickedTab;
 
-  document.getElementById("tab-context-menu").style.display = "none";
+  tabContextMenu.style.display = "none";
   rightClickedTab = null;
 
   switch (action) {
@@ -1572,7 +2210,7 @@ document.getElementById("tab-context-menu").addEventListener("click", async (e) 
       break;
 
     case "closeSaved":
-      const savedTabs = tabData.filter((t) => t.unsavedIndicator);
+      const savedTabs = tabData.filter((t) => t.isFileSaved);
       if (savedTabs.length > 0) {
         await closeTabsSequentially(savedTabs);
       }
@@ -1604,15 +2242,14 @@ document.getElementById("tab-context-menu").addEventListener("click", async (e) 
 editor.addEventListener("contextmenu", (e) => {
   e.preventDefault();
 
-  document.getElementById("tab-context-menu").style.display = "none";
+  tabContextMenu.style.display = "none";
   rightClickedTab = null;
-  const menu = document.getElementById("custom-context-menu");
 
-  menu.style.display = "block";
-  menu.style.visibility = "hidden";
+  customContextMenu.style.display = "block";
+  customContextMenu.style.visibility = "hidden";
 
-  const menuWidth = menu.offsetWidth;
-  const menuHeight = menu.offsetHeight;
+  const menuWidth = customContextMenu.offsetWidth;
+  const menuHeight = customContextMenu.offsetHeight;
   const pageWidth = window.innerWidth;
   const pageHeight = window.innerHeight;
 
@@ -1631,14 +2268,14 @@ editor.addEventListener("contextmenu", (e) => {
     top = Math.max(35, top);
   }
 
-  menu.style.left = `${left}px`;
-  menu.style.top = `${top}px`;
-  menu.style.visibility = "visible";
-  menu.style.display = "flex";
+  customContextMenu.style.left = `${left}px`;
+  customContextMenu.style.top = `${top}px`;
+  customContextMenu.style.visibility = "visible";
+  customContextMenu.style.display = "flex";
 });
 
 // editor context menu click handler
-document.getElementById("custom-context-menu").addEventListener("click", async (e) => {
+customContextMenu.addEventListener("click", async (e) => {
   const actionElement = e.target.closest("[data-action]");
   if (!actionElement) {
     return;
@@ -1677,7 +2314,7 @@ document.getElementById("custom-context-menu").addEventListener("click", async (
     case "wordWrap":
       isWordWrapOn = !isWordWrapOn;
       if (currentTab) currentTab.wordWrap = isWordWrapOn;
-      monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+      monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
       {
         const btn = e.target.closest('button[data-action="wordWrap"]');
         if (btn) {
@@ -1690,7 +2327,7 @@ document.getElementById("custom-context-menu").addEventListener("click", async (
       const currentLang = monaco.editor.getModel(monacoEditor.getModel().uri).getLanguageId();
       isMarkdownOn = currentLang !== "markdown";
       if (currentTab) currentTab.isMarkdown = isMarkdownOn;
-      monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "plaintext");
+      monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "monapad");
       applyDecorations();
       {
         const btn = e.target.closest('button[data-action="toggleMarkdown"]');
@@ -1703,26 +2340,26 @@ document.getElementById("custom-context-menu").addEventListener("click", async (
   }
 
   setTimeout(() => {
-    document.getElementById("custom-context-menu").style.display = "none";
+    customContextMenu.style.display = "none";
   }, 0);
 });
 
 // keep focus on editor when context menu is opened
-document.getElementById("custom-context-menu").addEventListener("mousedown", (e) => {
+customContextMenu.addEventListener("mousedown", (e) => {
   e.preventDefault();
 });
 
 // font & layout menu display
-fontLayoutButton.addEventListener("click", (e) => {
+settingsButton.addEventListener("click", (e) => {
   e.stopPropagation();
-  fontLayoutMenu.style.display = "block";
+  settingsMenu.style.display = "block";
   menu.style.display = "none";
   menuButton.style.pointerEvents = "auto";
 });
 editor.addEventListener("click", () => {
-  fontLayoutMenu.style.display = "none";
+  settingsMenu.style.display = "none";
 });
-fontLayoutMenu.addEventListener("click", (e) => {
+settingsMenu.addEventListener("click", (e) => {
   e.stopPropagation();
 });
 

@@ -5,13 +5,23 @@ const path = require("path");
 const fs = require("fs");
 const Store = require("electron-store").default;
 const log = require("electron-log");
+const logDir = path.dirname(log.transports.file.getFile().path);
 
 const store = new Store();
 const watchers = new Map();
+const watchedCssFiles = new Map();
 const gotTheLock = app.requestSingleInstanceLock();
 
 let mainWindow = null;
 let filePathToOpen = null;
+
+fs.readdirSync(logDir).forEach((file) => {
+  if (file.startsWith("main.log.old")) {
+    const filePath = path.join(logDir, file);
+    fs.unlinkSync(filePath);
+    console.log(`[LOG CLEANUP] Deleted old log file: ${file}`);
+  }
+});
 
 function createWindow() {
   const windowBounds = store.get("windowBounds") || { width: 800, height: 600 };
@@ -21,6 +31,7 @@ function createWindow() {
     height: windowBounds.height,
     minWidth: 400,
     minHeight: 210,
+    backgroundColor: "#000000",
     frame: false,
     show: false,
     autoHideMenuBar: true,
@@ -37,6 +48,14 @@ function createWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+  });
+
+  mainWindow.on("focus", () => {
+    mainWindow.webContents.send("window-focus", true);
+  });
+
+  mainWindow.on("blur", () => {
+    mainWindow.webContents.send("window-focus", false);
   });
 
   mainWindow.on("resize", () => {
@@ -67,14 +86,10 @@ function createNewWindow() {
     height: windowBounds.height,
     minWidth: 400,
     minHeight: 210,
+    backgroundColor: "#000000",
     frame: false,
-    transparent: true,
-    vibrancy: "acrylic",
-    visualEffectState: "active",
-    backgroundColor: "#00000000",
-    center: true,
-    autoHideMenuBar: true,
     show: false,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -88,6 +103,14 @@ function createNewWindow() {
 
   win.once("ready-to-show", () => {
     win.show();
+  });
+
+  win.on("focus", () => {
+    win.webContents.send("window-focus", true);
+  });
+
+  win.on("blur", () => {
+    win.webContents.send("window-focus", false);
   });
 
   win.on("resize", () => {
@@ -112,6 +135,64 @@ function createNewWindow() {
 // app version
 ipcMain.handle("get-app-version", () => {
   return app.getVersion();
+});
+
+// theme folder
+ipcMain.handle("get-custom-themes", async () => {
+  try {
+    const userThemesDir = path.join(app.getPath("userData"), "themes");
+
+    const themesMap = new Map();
+
+    if (fs.existsSync(userThemesDir)) {
+      const files = fs.readdirSync(userThemesDir);
+      for (const file of files) {
+        if (file.endsWith(".css")) {
+          const themeName = file.replace(/\.css$/, "");
+          const fullPath = path.join(userThemesDir, file);
+          themesMap.set(themeName, fullPath);
+        }
+      }
+    }
+
+    return Object.fromEntries(themesMap);
+  } catch {
+    return {};
+  }
+});
+
+ipcMain.handle("get-user-data-path", () => {
+  return app.getPath("userData");
+});
+
+ipcMain.handle("read-css-file", async (event, filePath) => {
+  try {
+    const cssContent = fs.readFileSync(filePath, "utf8");
+    return cssContent;
+  } catch (error) {
+    console.error("Failed to read CSS file:", error);
+    return null;
+  }
+});
+
+ipcMain.on("watch-css-file", (event, filePath) => {
+  if (watchedCssFiles.has(filePath)) return;
+
+  const watcher = fs.watch(filePath, (eventType) => {
+    if (eventType === "change") {
+      event.sender.send("css-file-updated", filePath);
+    }
+  });
+
+  watchedCssFiles.set(filePath, watcher);
+});
+
+ipcMain.on("unwatch-css-file", (event, filePath) => {
+  const watcher = watchedCssFiles.get(filePath);
+  if (watcher) {
+    watcher.close();
+    watchedCssFiles.delete(filePath);
+  }
 });
 
 // File operations, window control handler
@@ -156,10 +237,28 @@ ipcMain.handle("file:exists", async (event, filePath) => {
 ipcMain.handle("file:watch", (event, filePath) => {
   if (watchers.has(filePath)) return;
   try {
-    const watcher = fs.watch(filePath, (eventType) => {
-      BrowserWindow.getAllWindows().forEach((win) => {
-        win.webContents.send("file:changed", { filePath, eventType });
-      });
+    const watcher = fs.watch(filePath, async (eventType) => {
+      if (eventType === "rename") {
+        // for app that deletes original file and use temporary file to apply change
+        setTimeout(() => {
+          fs.promises
+            .access(filePath, fs.constants.F_OK)
+            .then(() => {
+              BrowserWindow.getAllWindows().forEach((win) => {
+                win.webContents.send("file:changed", { filePath, eventType: "change" });
+              });
+            })
+            .catch(() => {
+              BrowserWindow.getAllWindows().forEach((win) => {
+                win.webContents.send("file:changed", { filePath, eventType: "rename" });
+              });
+            });
+        }, 100);
+      } else {
+        BrowserWindow.getAllWindows().forEach((win) => {
+          win.webContents.send("file:changed", { filePath, eventType });
+        });
+      }
     });
     watchers.set(filePath, watcher);
   } catch (err) {
@@ -177,7 +276,14 @@ ipcMain.handle("file:unwatch", (event, filePath) => {
 
 ipcMain.handle("open-path", async (event, path) => {
   try {
-    await shell.showItemInFolder(path);
+    const stats = fs.statSync(path);
+    if (stats.isDirectory()) {
+      // open inside folder if folder path
+      await shell.openPath(path);
+    } else {
+      // open parent folder if file path
+      await shell.showItemInFolder(path);
+    }
   } catch (error) {
     log.error("Failed to open path:", error);
   }
@@ -315,6 +421,13 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
+    // create theme folder if not exist
+    const userThemesPath = path.join(app.getPath("userData"), "themes");
+    if (!fs.existsSync(userThemesPath)) {
+      fs.mkdirSync(userThemesPath, { recursive: true });
+      console.log("[INIT] Created themes folder:", userThemesPath);
+    }
+
     createWindow();
 
     // Handle file opened on app start
@@ -328,9 +441,23 @@ if (!gotTheLock) {
       }
     });
 
-    // Auto updater (optional)
+    // Updater
     if (autoUpdater) {
       autoUpdater.checkForUpdatesAndNotify();
+
+      autoUpdater.on("update-downloaded", async () => {
+        const { response } = await dialog.showMessageBox(mainWindow, {
+          type: "info",
+          buttons: ["Restart now", "Later"],
+          defaultId: 0,
+          cancelId: 1,
+          title: "Update Ready",
+          message: "A new version has been downloaded. Restart the app now to apply the update?",
+        });
+        if (response === 0) {
+          autoUpdater.quitAndInstall();
+        }
+      });
     }
 
     app.on("activate", function () {

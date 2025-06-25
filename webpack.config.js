@@ -18,5 +18,4 @@ module.exports = {
   },
   plugins: [new MonacoWebpackPlugin()],
   target: "electron-renderer",
-  mode: "production",
 };

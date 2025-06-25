@@ -10,7 +10,12 @@
         font-weight: 400;
         font-style: normal;
       }
-
+      @font-face {
+        font-family: "Figtree";
+        src: url("./font/Figtree-Medium.ttf") format("truetype");
+        font-weight: 500;
+        font-style: normal;
+      }
       @font-face {
         font-family: "Figtree";
         src: url("./font/Figtree-Bold.ttf") format("truetype");
@@ -18,21 +23,97 @@
         font-style: normal;
       }
       :root {
-        --color1: #121214; /* editor, button */
-        --color2: #1a1a1e; /* toolbar, statusbar, menu, modal */
-        --color3: #242429; /* button hover */
+        --color1: #121214; /* editor, modal background */
+        --color2: #1a1a1e; /* toolbar, statusbar, menu, message background */
+        --color3: #242429; /* button hover, modal button */
+        --editorText: #ffffff; /* text color */
         --btnHover: #666; /* modal button hover */
-        --red: #e81123; /* window close */
-        --btnBlue: #306ea0; /* blue button */
-        --txtBlue: #569cd6; /* header text, blue button hover */
+        --highlight: #569cd6;
+        --btnHighlight: var(--highlight); /* modal highlight button */
+        --windowClose: #e81123; /* window close */
+        --warn: #cf5d6e; /* deleted file title */
+
+        /* text, syntax highlight color */
+        /* style: bold italic underline (set with space if multiple) */
+        --heading1: var(--highlight); /* heading 1 */
+        --heading1Style: ;
+
+        --heading2: #adcfeb; /* heading 2 */
+        --heading2Style: ;
+
+        --heading3: var(--editorText); /* heading 3 */
+        --heading3Style: ;
+
+        --bulletPoint: var(--highlight); /* bullet point */
+        --bulletPointStyle: ;
+
+        --numberList: var(--highlight); /* bullet point */
+        --numberListStyle: ;
+
+        --subText: #898989; /* sub text */
+        --subTextStyle: ;
+
+        --blockQuote: var(--editorText); /* block quote */
+        --blockQuoteStyle: italic;
+
+        --inlineCode: var(--warn); /* inline code */
+        --inlineCodeStyle: ;
+
+        --codeBlockFence: #898989; /* code block fence */
+        --codeBlockFenceStyle: ;
+
+        --codeBlock: var(--highlight); /* code block */
+        --codeBlockStyle: ;
+
+        /* monaco editor color */
+        --vscode-editor-background: var(--color1);
+        --vscode-editor-foreground: var(--editorText);
+        --vscode-editor-lineHighlightBackground: var(--color2);
+        --vscode-editor-lineHighlightBorder: #00000000;
+        --vscode-editorWidget-background: var(--color2);
+        --vscode-editorHoverWidget-background: var(--color2);
+        --vscode-quickInputList-focusBackground: var(--color3);
+        --vscode-input-background: var(--color1);
+        --vscode-list-activeSelectionBackground: var(--color3);
+        --vscode-list-dropBackground: var(--color3);
+        --vscode-menu-selectionBackground: var(--color3);
+        --vscode-list-hoverBackground: var(--color3);
+        --vscode-editorStickyScrollHover-background: var(--color3);
+        --vscode-button-hoverBackground: var(--color3);
+        --vscode-badge-background: var(--color3);
+        --vscode-editorWidget-border: var(--color3);
+        --vscode-editorHoverWidget-border: var(--color3);
       }
+
       body {
         margin: 0;
-        font-family: "figtree", Meiryo, sans-serif;
+        font-family: "figtree", Yu Gothic UI, Meiryo, Hiragino Sans, sans-serif;
         background: var(--color1);
-        color: #fff;
+        color: var(--editorText);
         overflow: hidden;
       }
+
+      /* monaco editor style */
+      /* .monaco-editor .sub-text */
+      .monaco-editor .marker-transparent {
+        opacity: 0.25;
+      }
+      .monaco-editor .unexpected-closing-bracket {
+        color: var(--editorText) !important;
+      }
+      .monaco-editor .line-numbers {
+        font-family: "Consolas", "Courier New", monospace !important;
+        opacity: 0.5 !important;
+      }
+      .monaco-editor .scroll-decoration {
+        /* top shadow */
+        display: none;
+      }
+      :focus-visible {
+        outline: var(--highlight) solid 1px;
+        border-radius: 2px;
+      }
+
       button {
         font-family: inherit;
       }
@@ -45,6 +126,10 @@
         height: 28px;
         font-size: 14px;
         line-height: 28px;
+      }
+      .disabled {
+        opacity: 0.25;
+        pointer-events: none;
       }
       #container {
         display: flex;
@@ -61,7 +146,7 @@
       #menu-button {
         -webkit-app-region: no-drag;
         background: var(--color2);
-        color: white;
+        color: var(--editorText);
         border: none;
         font-size: 11px;
         letter-spacing: 0.2em;
@@ -74,7 +159,7 @@
         height: 100%;
       }
       #menu-button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
       #menu {
         position: absolute;
@@ -85,72 +170,61 @@
         z-index: 9998;
         width: 260px;
         padding: 5px 0;
-        max-height: calc(100vh - 80px); /* 画面の縦幅を超えないようにする（メニューボタン位置に応じて調整） */
+        max-height: calc(100vh - 80px);
         overflow-y: auto;
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         user-select: none;
       }
       #menu button {
         position: relative;
         background: none;
-        color: white;
+        color: var(--editorText);
         border: none;
         text-align: left;
         cursor: pointer;
         padding: 0 10px;
       }
       #menu button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
       #menu .hr,
       #recent-menu .hr,
       #custom-context-menu .hr,
-      #tab-context-menu .hr {
+      #tab-context-menu .hr,
+      #theme-menu .hr {
         height: 1px;
-        background-color: rgba(255, 255, 255, 0.1);
+        background: color-mix(in srgb, var(--editorText) 10%, transparent);
         margin: 5px 10px;
         flex-shrink: 0;
+      }
+      #menu,
+      #custom-context-menu,
+      #tab-context-menu,
+      #theme-menu,
+      #recent-menu,
+      #file-saved,
+      #file-opened {
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
       }
       #menu button .label {
         display: inline-block;
         width: 57%;
       }
       #menu button .shortcut {
-        color: rgba(255, 255, 255, 0.25);
+        color: var(--editorText);
+        opacity: 0.25;
       }
-      #menu::-webkit-scrollbar,
-      #custom-context-menu::-webkit-scrollbar,
-      #font-layout-menu::-webkit-scrollbar,
-      #about-main::-webkit-scrollbar {
-        width: 8px;
-      }
-      #font-family-select::-webkit-scrollbar {
+      .scrollable::-webkit-scrollbar {
         width: 10px;
       }
-      #menu::-webkit-scrollbar-track,
-      #custom-context-menu::-webkit-scrollbar-track,
-      #font-family-select::-webkit-scrollbar-track,
-      #font-layout-menu::-webkit-scrollbar-track,
-      #about-main::-webkit-scrollbar-track {
+      .scrollable::-webkit-scrollbar-track {
         background: transparent;
       }
-      #menu::-webkit-scrollbar-thumb,
-      #custom-context-menu::-webkit-scrollbar-thumb,
-      #font-family-select::-webkit-scrollbar-thumb,
-      #font-layout-menu::-webkit-scrollbar-thumb,
-      #about-main::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.1);
+      .scrollable::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--editorText) 10%, transparent);
       }
-      #menu::-webkit-scrollbar-button,
-      #menu::-webkit-scrollbar-corner,
-      #custom-context-menu::-webkit-scrollbar-button,
-      #custom-context-menu::-webkit-scrollbar-corner,
-      #font-family-select::-webkit-scrollbar-button,
-      #font-family-select::-webkit-scrollbar-corner,
-      #font-layout-menu::-webkit-scrollbar-button,
-      #font-layout-menu::-webkit-scrollbar-corner,
-      #about-main::-webkit-scrollbar-button,
-      #about-main::-webkit-scrollbar-corner {
+      .scrollable::-webkit-scrollbar-button,
+      .scrollable::-webkit-scrollbar-corner {
         display: none;
       }
       #theme-menu {
@@ -160,16 +234,20 @@
         background: var(--color2);
         display: none;
         z-index: 9998;
-        width: 120px;
+        width: fit-content;
+        min-width: 120px;
+        max-width: min(300px, calc(100vw - 260px));
         padding: 5px 0;
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         user-select: none;
+        box-sizing: border-box;
+        overflow-y: auto;
       }
 
       #theme-menu button {
         position: relative;
         background: none;
-        color: white;
+        color: var(--editorText);
         border: none;
         text-align: left;
         cursor: pointer;
@@ -179,16 +257,29 @@
         align-items: center;
       }
 
+      #theme-menu button[data-theme="custom-theme"] span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       #theme-menu button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
 
       .checkmark {
         display: none;
+        opacity: 1;
+      }
+
+      #theme-menu button .checkmark {
+        display: inline-block;
+        opacity: 0;
+        margin-left: 20px;
       }
 
       #theme-menu button.active .checkmark {
-        display: inline-block;
+        opacity: 1;
       }
 
       #recent-menu {
@@ -199,16 +290,18 @@
         display: none;
         z-index: 9998;
         padding: 5px 0;
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         max-width: calc(100vw - 260px - 5px - 2px);
         min-width: 120px;
         user-select: none;
+        box-sizing: border-box;
+        overflow-y: auto;
       }
 
       #recent-menu button {
         position: relative;
         background: none;
-        color: white;
+        color: var(--editorText);
         border: none;
         text-align: left;
         cursor: pointer;
@@ -225,7 +318,7 @@
         white-space: nowrap;
       }
       #recent-menu button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
 
       #toggleStatusBar,
@@ -238,14 +331,37 @@
         justify-content: space-between;
         border: none;
       }
-      #tabs {
-        max-width: calc(100vw - 230px);
+      #tabs-container {
         height: 100%;
         display: flex;
+        max-width: calc(100vw - 230px);
+        flex-shrink: 1;
+        flex-grow: 0;
+        align-items: center;
+      }
+      #tabs {
+        display: flex;
         flex-grow: 1;
-        overflow: hidden;
+        min-width: 0;
+        height: 100%;
+        overflow-y: hidden;
+        overflow-x: auto;
         align-items: center;
         user-select: none;
+        -webkit-app-region: no-drag;
+      }
+      #tabs::-webkit-scrollbar {
+        height: 3px;
+      }
+      #tabs::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #tabs::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--editorText) 10%, transparent);
+      }
+      #tabs::-webkit-scrollbar-button,
+      #tabs::-webkit-scrollbar-corner {
+        display: none;
       }
       .tab {
         -webkit-app-region: no-drag;
@@ -253,8 +369,9 @@
         align-items: center;
         justify-content: space-between;
         flex: 1 1 0;
+        width: 200px;
+        min-width: 50px;
         max-width: 200px;
-        min-width: 0;
         height: 100%;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -263,7 +380,7 @@
         padding: 0 10px;
         font-size: 14px;
         position: relative;
-        color: rgba(255, 255, 255, 0.5);
+        color: color-mix(in srgb, var(--editorText) 50%, transparent);
         cursor: default;
       }
       .tab:not(.active):not(.prev-active)::before {
@@ -273,7 +390,7 @@
         top: 20%;
         height: 60%;
         width: 1px;
-        background-color: rgba(255, 255, 255, 0.25);
+        background: color-mix(in srgb, var(--editorText) 25%, transparent);
       }
       .tab:first-of-type:not(.active)::after {
         content: "";
@@ -282,20 +399,60 @@
         top: 20%;
         height: 60%;
         width: 1px;
-        background-color: rgba(255, 255, 255, 0.25);
+        background: color-mix(in srgb, var(--editorText) 25%, transparent);
       }
       .tab.active {
         background: var(--color1);
         border-right: none;
-        color: rgba(255, 255, 255, 1);
+        color: color-mix(in srgb, var(--editorText) 100%, transparent);
       }
-      .tab:hover {
-        color: rgba(255, 255, 255, 1);
+      .tab-dragging:not(.active) {
+        z-index: 1 !important;
       }
-      .dragging .tab:not(.active):hover {
-        color: rgba(255, 255, 255, 0.5) !important;
+      .tab-dragging:not(.active):not(.tab-dragging) .close-svg {
+        opacity: 0;
+      }
+      .tab.active {
+        z-index: 2 !important;
+      }
+      .tab:hover,
+      .dragging .tab.tab-dragging {
+        color: color-mix(in srgb, var(--editorText) 100%, transparent);
+      }
+      .dragging .tab:not(.active):not(.tab-dragging):hover {
+        color: color-mix(in srgb, var(--editorText) 50%, transparent) !important;
         cursor: default;
       }
+      .tab .reload-button {
+        opacity: 0.5;
+        min-width: 12px;
+        height: 20px;
+        padding: 0;
+        margin-right: 8px;
+        background: none;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .tab .reload-button:hover {
+        opacity: 1;
+      }
+      .tab.has-reload-button .name {
+        line-height: 20px;
+      }
+      .tab .reload-button svg path {
+        stroke-width: 2px;
+        /* stroke: var(--highlight); */
+      }
+      .tab .reload-button svg {
+        width: 12px;
+        height: 12px;
+        overflow: visible;
+      }
+
       .tab .close {
         opacity: 0;
         cursor: pointer;
@@ -305,7 +462,8 @@
         justify-content: center;
       }
 
-      .tab:hover .close {
+      .tab:hover .close,
+      .tab.tab-dragging .close {
         opacity: 1;
       }
 
@@ -325,7 +483,8 @@
         justify-content: center;
       }
 
-      .tab:hover .close .close-svg {
+      .tab:hover .close .close-svg,
+      .tab.tab-dragging .close .close-svg {
         display: flex;
       }
 
@@ -337,7 +496,7 @@
         display: none;
         width: 6px;
         height: 6px;
-        background-color: white;
+        background: white;
         border-radius: 50%;
         opacity: 0.5;
         margin: 2px;
@@ -366,16 +525,22 @@
         white-space: nowrap;
         display: flex;
         max-width: calc(100% - 15px);
+        text-decoration: none;
+      }
+      .tab span.name.warn {
+        text-decoration: line-through;
+        color: var(--warn);
       }
       #add-tab {
+        display: flex;
+        flex-shrink: 0;
         -webkit-app-region: no-drag;
         background: var(--color2);
-        color: white;
+        color: var(--editorText);
         border: none;
         font-size: 18px;
         cursor: pointer;
-        order: 9999;
-        display: flex;
+        /* order: 9999; */
         align-items: center;
         justify-content: center;
         width: 40px;
@@ -383,11 +548,17 @@
         height: 100%;
       }
       #add-tab:hover {
-        background-color: var(--color3);
+        background: var(--color3);
+      }
+      #toolbar-drag-fill {
+        flex-grow: 1;
+        height: 100%;
+        -webkit-app-region: drag;
+        pointer-events: none;
       }
       #window-controls {
         display: flex;
-        margin-left: auto; /* 他要素を左に寄せ、これを右端に配置 */
+        margin-left: auto;
         height: 100%;
         -webkit-app-region: no-drag;
       }
@@ -410,10 +581,10 @@
       }
       #min-button:hover,
       #max-button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
       #close-button:hover {
-        background-color: var(--red);
+        background: var(--windowClose);
       }
 
       button:focus,
@@ -425,10 +596,9 @@
         flex: 1;
         box-sizing: border-box;
         background: var(--color1);
-        color: white;
+        color: var(--editorText);
         border: none;
         resize: none;
-        white-space: pre-wrap;
       }
       #status-bar {
         height: 25px;
@@ -439,7 +609,7 @@
         align-items: center;
         padding: 0 10px;
         box-sizing: border-box;
-        color: rgba(255, 255, 255, 0.5);
+        color: color-mix(in srgb, var(--editorText) 50%, transparent);
         user-select: none;
         min-width: 0;
       }
@@ -466,62 +636,68 @@
         text-align: right;
       }
 
-      .heading,
-      .dash-marker {
-        color: var(--txtBlue) !important;
-      }
-      .gray-text {
-        color: gray !important;
-      }
-      .heading-2 {
-        color: #adcfeb !important;
-      }
-      .monaco-editor .unexpected-closing-bracket {
-        color: rgba(255, 255, 255, 1) !important;
-      }
-      .monaco-editor .line-numbers {
-        font-family: "Consolas", "Courier New", monospace !important;
-        opacity: 0.5 !important;
-      }
-      #file-saved,
-      #file-opened {
+      .message {
         position: fixed;
         left: 50%;
         bottom: 15%;
         transform: translate(-50%, 20px);
-        background-color: var(--color2);
-        color: white;
+        background: var(--color2);
+        color: var(--editorText);
         padding: 10px 20px;
         font-size: 14px;
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         z-index: 9997;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease, transform 0.3s ease;
       }
-      #file-saved.show,
-      #file-opened.show {
+      .message.show {
         opacity: 1;
         transform: translate(-50%, 0);
       }
-      #confirm-save-background {
+      #confirm-save-background,
+      #file-drop-background {
         display: none;
         position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.75);
         align-items: center;
         justify-content: center;
-        pointer-events: all;
         z-index: 10000;
+      }
+      #confirm-save-background {
+        pointer-events: all;
+      }
+      #file-drop-background {
+        pointer-events: none;
+      }
+      #file-drop {
+        pointer-events: none;
+        display: none;
+        border: dashed 2px color-mix(in srgb, var(--editorText) 50%, transparent);
+        border-radius: 7.5px;
+        width: 300px;
+        height: 200px;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      #file-drop img {
+        width: 100px;
+      }
+      #file-drop p {
+        margin: 10px 0;
+        font-size: 16px;
       }
       #confirm-save,
       #confirm-save-window {
-        color: white;
+        color: var(--editorText);
         padding: 20px;
-        background-color: var(--color1);
+        background: var(--color1);
         text-align: center;
         min-width: min(100vw, 250px);
         max-width: 400px;
@@ -531,7 +707,7 @@
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
       }
 
       #confirm-save p,
@@ -553,64 +729,85 @@
       #confirm-save .confirm-buttons {
         display: flex;
         justify-content: space-between;
-        width: 250px;
+        width: auto;
+        gap: 10px;
       }
       #confirm-save-window .confirm-buttons {
         display: flex;
         justify-content: space-between;
-        width: 320px;
+        width: auto;
+        gap: 10px;
       }
 
       #confirm-save .confirm-buttons button,
       #confirm-save-window .confirm-buttons button {
         display: flex;
         padding: 8px 16px;
-        background-color: var(--color3);
-        color: white;
+        background: var(--color3);
+        color: var(--editorText);
         border: none;
         cursor: pointer;
       }
-      #confirm-save-window .confirm-buttons #confirm-save-all {
-        background-color: var(--btnBlue);
+      #confirm-save-window .confirm-buttons #confirm-save-all,
+      #confirm-save .confirm-buttons #confirm-save-yes {
+        background: var(--btnHighlight);
       }
-      #confirm-save-window .confirm-buttons #confirm-save-all:hover {
-        background-color: var(--txtBlue);
+      #confirm-save-window .confirm-buttons #confirm-save-all:hover,
+      #confirm-save .confirm-buttons #confirm-save-yes:hover {
+        background: var(--highlight);
       }
 
       #confirm-save .confirm-buttons button:hover,
       #confirm-save-window .confirm-buttons button:hover,
       #about button:hover {
-        background-color: var(--btnHover);
+        background: var(--btnHover);
       }
 
       #about {
         display: none;
         flex-direction: column;
         padding: 20px;
-        background-color: var(--color1);
-        width: 320px;
-        max-height: calc(100vh - 40px);
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        background: var(--color1);
+        max-width: min(calc(100vw - 60px), 360px);
+        max-height: calc(100vh - 60px);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         font-size: 14px;
-        user-select: none;
       }
       #about-main {
         overflow-y: auto;
         flex: 1;
         min-height: 0;
       }
-      #about a {
-        color: var(--txtBlue);
+      #about a,
+      .settings-info a {
+        color: var(--highlight);
+      }
+      a {
+        transition: opacity 0.2s;
+      }
+      a:hover {
+        opacity: 0.6;
       }
       #about-footer {
         display: flex;
         justify-content: flex-end;
       }
+      #disclaimer-title {
+        display: inline-block;
+        margin-bottom: 5px;
+        color: var(--editorText);
+      }
+      #disclaimer {
+        display: inline-block;
+        color: var(--btnHover);
+        font-size: 12px;
+        line-height: 1;
+      }
       #about button {
         display: flex;
         padding: 8px 16px;
-        background-color: var(--color3);
-        color: white;
+        background: var(--color3);
+        color: var(--editorText);
         border: none;
         cursor: pointer;
         margin-top: 15px;
@@ -624,7 +821,7 @@
       #tab-context-menu.menu {
         position: absolute;
         background: var(--color2);
-        border: solid 1px rgba(255, 255, 255, 0.1);
+        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
         padding: 5px 0;
         z-index: 9999;
         display: none;
@@ -636,7 +833,7 @@
       #tab-context-menu button {
         position: relative;
         background: none;
-        color: white;
+        color: var(--editorText);
         border: none;
         text-align: left;
         cursor: pointer;
@@ -645,7 +842,7 @@
       }
       #custom-context-menu button:hover,
       #tab-context-menu button:hover {
-        background-color: var(--color3);
+        background: var(--color3);
       }
       #custom-context-menu button .label {
         display: inline-block;
@@ -657,13 +854,14 @@
       }
       #custom-context-menu button .shortcut,
       #tab-context-menu button .shortcut {
-        color: rgba(255, 255, 255, 0.25);
+        color: var(--editorText);
+        opacity: 0.25;
       }
       #custom-context-menu button svg {
         display: inline-block;
       }
 
-      #font-layout-menu {
+      #settings-menu {
         position: absolute;
         background: var(--color2);
         z-index: 9996;
@@ -672,30 +870,31 @@
         top: 35px;
         right: 0px;
         user-select: none;
-        padding: 10px 0;
+        padding: 10px 0 40px 0;
         box-sizing: border-box;
         display: none;
         overflow-y: auto;
       }
-      #font-layout-menu h1 {
-        font-weight: 400;
-        font-size: 20px;
-        margin: 0;
+      #settings-menu h1 {
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.5;
+        margin: 0 0 10px 0;
         padding: 0 20px;
       }
-      #font-layout-menu .hr {
+      #settings-menu .hr {
         height: 1px;
-        background-color: rgba(255, 255, 255, 0.1);
-        margin: 10px 20px 5px 20px;
+        background: color-mix(in srgb, var(--editorText) 10%, transparent);
+        margin: 0px 20px 5px 20px;
         flex-shrink: 0;
       }
-      #font-layout-menu button {
+      #settings-menu button {
         position: relative;
         justify-content: space-between;
         display: flex;
         align-items: center;
         background: none;
-        color: white;
+        color: var(--editorText);
         border: none;
         text-align: left;
         cursor: pointer;
@@ -705,10 +904,10 @@
         line-height: 28px;
         padding: 0 20px;
       }
-      #font-layout-menu button:hover {
-        background-color: var(--color3);
+      #settings-menu button:hover {
+        background: var(--color3);
       }
-      #font-layout-menu .row {
+      #settings-menu .row {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -719,63 +918,76 @@
         font-size: 14px;
       }
 
-      #font-layout-menu .label {
-        color: white;
+      #settings-menu button {
+        margin-bottom: 5px;
+      }
+
+      #settings-menu .label {
+        color: var(--editorText);
         user-select: none;
       }
 
-      #font-layout-menu .control {
+      #settings-menu .control {
         display: flex;
         align-items: center;
       }
-      #font-size-decrease,
-      #font-size-increase,
-      #tab-size-decrease,
-      #tab-size-increase {
+      #settings-menu .select {
+        display: flex;
+        align-items: center;
+        width: 100%;
+      }
+      .size-change-btn {
         cursor: pointer;
-        width: 23px;
-        height: 23px;
-        margin: 0 2px;
+        width: 25px;
+        height: 25px;
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      #font-size-decrease:hover,
-      #font-size-increase:hover,
-      #tab-size-decrease:hover,
-      #tab-size-increase:hover {
-        background-color: var(--color3);
+      .size-change-btn:hover {
+        background: var(--color3);
+      }
+      #tab-size-value,
+      #font-size-value {
+        color: var(--editorText);
       }
       #font-family-select,
-      #font-style-select {
+      #langSwitcher {
         all: unset;
+        display: block;
         height: 28px;
-        width: 120px;
+        width: 100%;
         background: var(--color2);
-        border: solid 1px rgba(255, 255, 255, 0.1);
-        color: white;
+        color: var(--editorText);
         font: inherit;
-        padding-right: 30px;
-        padding-left: 5px;
         appearance: none;
         -webkit-appearance: none;
         -moz-appearance: none;
         cursor: pointer;
       }
-      #font-select-wrapper {
+      #font-select-wrapper,
+      #lang-select-wrapper {
         position: relative;
+        width: 100%;
       }
-      #font-select-wrapper::after {
+      #font-select-wrapper::after,
+      #lang-select-wrapper::after {
         content: "";
         position: absolute;
         pointer-events: none;
         top: 12px;
-        right: 8px;
+        right: 0px;
         width: 14px;
         height: 7px;
         background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23fff" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
           no-repeat center;
         background-size: contain;
+      }
+      .settings-info {
+        color: var(--btnHover);
+        font-size: 12px;
+        padding: 0 20px;
+        margin: 0;
       }
     </style>
   </head>
@@ -807,127 +1019,10 @@
             />
           </svg>
         </button>
-        <div id="menu">
-          <button id="newTabBtn">
-            <span class="label">New</span>
-            <span class="shortcut">Ctrl + T</span>
-          </button>
-          <button id="newWindowBtn">
-            <span class="label">New Window</span>
-            <span class="shortcut">Ctrl + N</span>
-          </button>
-          <button id="openFileBtn">
-            <span class="label">Open</span>
-            <span class="shortcut">Ctrl + O</span>
-          </button>
-          <button id="openRecent">
-            <span class="btn-text">Open Recent</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 5.65 9.77"
-              width="7.8"
-              height="13"
-              style="margin-left: 6px; vertical-align: middle"
-            >
-              <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
-            </svg>
-          </button>
-          <button id="saveFileBtn">
-            <span class="label">Save</span>
-            <span class="shortcut">Ctrl + S</span>
-          </button>
-          <button id="saveAsFileBtn">
-            <span class="label">Save As</span>
-            <span class="shortcut">Ctrl + Shift + S</span>
-          </button>
-          <div class="hr"></div>
-          <button id="triggerFindBtn">
-            <span class="label">Find</span>
-            <span class="shortcut">Ctrl + F</span>
-          </button>
-          <button id="triggerReplaceBtn">
-            <span class="label">Replace</span>
-            <span class="shortcut">Ctrl + H</span>
-          </button>
-          <div class="hr"></div>
-          <button id="print-button">Print</button>
-          <button id="font-layout">Font & Layout</button>
-          <button id="changeTheme">
-            <span class="btn-text">Theme</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 5.65 9.77"
-              width="7.8"
-              height="13"
-              style="margin-left: 6px; vertical-align: middle"
-            >
-              <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
-            </svg>
-          </button>
-          <button id="toggleStatusBar">
-            <span class="btn-text">Status Bar</span>
-            <svg
-              class="checkmark"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 10.23 7.15"
-              style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
-            >
-              <polyline
-                points=".5 3.58 3.58 6.65 9.73 .5"
-                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-              />
-            </svg>
-          </button>
-          <div class="hr"></div>
-          <button id="aboutBtn">About</button>
-        </div>
-        <div id="recent-menu"></div>
-        <div id="theme-menu">
-          <button data-theme="onyx">
-            Onyx
-            <svg
-              class="checkmark"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 10.23 7.15"
-              style="width: 13px; height: 13px; stroke: #fff; fill: none"
-            >
-              <polyline
-                points=".5 3.58 3.58 6.65 9.73 .5"
-                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-              />
-            </svg>
-          </button>
-          <button data-theme="dark">
-            Dark
-            <svg
-              class="checkmark"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 10.23 7.15"
-              style="width: 13px; height: 13px; stroke: #fff; fill: none"
-            >
-              <polyline
-                points=".5 3.58 3.58 6.65 9.73 .5"
-                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-              />
-            </svg>
-          </button>
-          <button data-theme="ash">
-            Ash
-            <svg
-              class="checkmark"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 10.23 7.15"
-              style="width: 13px; height: 13px; stroke: #fff; fill: none"
-            >
-              <polyline
-                points=".5 3.58 3.58 6.65 9.73 .5"
-                style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-              />
-            </svg>
-          </button>
-        </div>
 
-        <div id="tabs">
+        <div id="tabs-container">
+          <div id="tabs"></div>
+
           <button id="add-tab" aria-label="Add Tab">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11.95 11.95" width="13" height="13">
               <line
@@ -954,6 +1049,8 @@
           </button>
         </div>
 
+        <div id="toolbar-drag-fill"></div>
+
         <!-- window controls -->
         <div id="window-controls">
           <button class="window-button" id="min-button" aria-label="Minimize">
@@ -975,6 +1072,127 @@
         </div>
       </div>
 
+      <!-- toolbar menu -->
+      <div id="menu" class="scrollable">
+        <button id="newTabBtn">
+          <span class="label">New</span>
+          <span class="shortcut">Ctrl + T</span>
+        </button>
+        <button id="newWindowBtn">
+          <span class="label">New Window</span>
+          <span class="shortcut">Ctrl + N</span>
+        </button>
+        <button id="openFileBtn">
+          <span class="label">Open</span>
+          <span class="shortcut">Ctrl + O</span>
+        </button>
+        <button id="openRecent">
+          <span class="btn-text">Open Recent</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 5.65 9.77"
+            width="7.8"
+            height="13"
+            style="margin-left: 6px; vertical-align: middle"
+          >
+            <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
+          </svg>
+        </button>
+        <button id="saveFileBtn">
+          <span class="label">Save</span>
+          <span class="shortcut">Ctrl + S</span>
+        </button>
+        <button id="saveAsFileBtn">
+          <span class="label">Save As</span>
+          <span class="shortcut">Ctrl + Shift + S</span>
+        </button>
+        <div class="hr"></div>
+        <button id="triggerFindBtn">
+          <span class="label">Find</span>
+          <span class="shortcut">Ctrl + F</span>
+        </button>
+        <button id="triggerReplaceBtn">
+          <span class="label">Replace</span>
+          <span class="shortcut">Ctrl + H</span>
+        </button>
+        <div class="hr"></div>
+        <button id="print-button">Print</button>
+        <button id="changeTheme">
+          <span class="btn-text">Theme</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 5.65 9.77"
+            width="7.8"
+            height="13"
+            style="margin-left: 6px; vertical-align: middle"
+          >
+            <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
+          </svg>
+        </button>
+        <button id="toggleStatusBar">
+          <span class="btn-text">Status Bar</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="settingsBtn">Settings</button>
+        <div class="hr"></div>
+        <button id="aboutBtn">About</button>
+      </div>
+      <div id="recent-menu" class="scrollable"></div>
+      <div id="theme-menu" class="scrollable">
+        <button data-theme="onyx">
+          <span>Onyx</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button data-theme="dark">
+          <span>Dark</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button data-theme="ash">
+          <span>Ash</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+      </div>
+
       <!-- editor -->
       <div id="editor"></div>
 
@@ -990,11 +1208,13 @@
       </div>
 
       <!-- messages -->
-      <div id="file-saved">Saved</div>
-      <div id="file-opened">File already opened!</div>
+      <div id="file-saved" class="message">Saved</div>
+      <div id="file-opened" class="message">File already opened!</div>
+      <div id="file-updated" class="message">File updated with external changes</div>
+      <div id="file-modified" class="message">File modified externally!</div>
 
       <!-- editor context menu -->
-      <div id="custom-context-menu" style="display: none; position: absolute" class="menu">
+      <div id="custom-context-menu" style="display: none; position: absolute" class="menu scrollable">
         <button data-action="cut">
           <span class="label">Cut</span>
           <span class="shortcut">Ctrl + X</span>
@@ -1021,7 +1241,7 @@
         </button>
         <div class="hr"></div>
         <button data-action="wordWrap" id="word-wrap">
-          Word Wrap
+          <span>Word Wrap</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1035,7 +1255,7 @@
           </svg>
         </button>
         <button data-action="toggleMarkdown" id="toggle-markdown">
-          Markdown Mode
+          <span>Markdown Mode</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1074,24 +1294,33 @@
         </button>
       </div>
 
-      <!-- font & layout -->
-      <div id="font-layout-menu">
+      <!-- settings -->
+      <div id="settings-menu" class="scrollable">
         <!-- Font -->
-        <h1>Font</h1>
+        <h1 class="font">Font</h1>
         <div class="hr"></div>
+        <div class="row select-row">
+          <!-- <div class="label font">Font</div> -->
+          <div class="select">
+            <div id="font-select-wrapper">
+              <select id="font-family-select" class="scrollable"></select>
+            </div>
+          </div>
+        </div>
+
         <div class="row">
-          <div class="label">Size</div>
+          <div class="label size">Size</div>
           <div class="control">
-            <div id="font-size-decrease">
+            <div id="font-size-decrease" class="size-change-btn">
               <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
                 <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
               </svg>
             </div>
             <span
               id="font-size-value"
-              style="color: #fff; user-select: none; min-width: 25px; display: inline-block; text-align: center"
+              style="user-select: none; min-width: 25px; display: inline-block; text-align: center"
             ></span>
-            <div id="font-size-increase">
+            <div id="font-size-increase" class="size-change-btn">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 11.95 11.95"
@@ -1122,20 +1351,15 @@
           </div>
         </div>
 
-        <div class="row">
-          <div class="label">Font</div>
-          <div class="control">
-            <div id="font-select-wrapper">
-              <select id="font-family-select"></select>
-            </div>
-          </div>
-        </div>
+        <p id="fontDescription" class="settings-info">
+          Word wrap may misalign with proportional fonts. Try a monospaced font like Consolas if needed.
+        </p>
 
-        <!-- Layout -->
-        <h1 style="margin-top: 50px">Layout</h1>
+        <!-- Editor Layout -->
+        <h1 style="margin-top: 50px" id="settingsLayout">Editor</h1>
         <div class="hr"></div>
         <button id="line-highlight">
-          Highlight current line
+          <span>Highlight current line</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1149,7 +1373,35 @@
           </svg>
         </button>
         <button id="line-num">
-          Display line numbers
+          <span>Display line numbers</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="minimap">
+          <span>Display minimap</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="toggleSyntaxHighlight">
+          <span>Syntax highlight</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1163,18 +1415,18 @@
           </svg>
         </button>
         <div class="row">
-          <div class="label">Tab Size</div>
+          <div class="label tabSize">Tab Size</div>
           <div class="control">
-            <div id="tab-size-decrease">
+            <div id="tab-size-decrease" class="size-change-btn">
               <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
                 <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
               </svg>
             </div>
             <span
               id="tab-size-value"
-              style="color: #fff; user-select: none; min-width: 25px; display: inline-block; text-align: center"
+              style="user-select: none; min-width: 25px; display: inline-block; text-align: center"
             ></span>
-            <div id="tab-size-increase">
+            <div id="tab-size-increase" class="size-change-btn">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 11.95 11.95"
@@ -1204,6 +1456,35 @@
             </div>
           </div>
         </div>
+
+        <!-- Custom Theme -->
+        <h1 style="margin: 50px 0 10px 0" id="settingsCustomTheme">Custom Theme</h1>
+        <div class="hr"></div>
+        <button id="openThemeFolder">Open Theme Folder</button>
+
+        <p id="customThemeDescription" class="settings-info">
+          Apply custom themes by creating CSS files here. Details
+          <a href="https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md" target="_blank">here</a>.
+        </p>
+
+        <!-- language -->
+        <h1 style="margin: 50px 0 10px 0" id="settingsLanguage">Language</h1>
+        <div class="hr"></div>
+        <div class="row select-row">
+          <div class="select">
+            <div id="lang-select-wrapper">
+              <select id="langSwitcher">
+                <option value="en">English</option>
+                <option value="ja">日本語</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <p id="langDescription" class="settings-info">
+          Contribute translations
+          <a href="https://github.com/sheetau/monapad/blob/main/LANGUAGE.md" target="_blank">here</a>.
+        </p>
 
         <!-- file importing -->
         <input type="file" id="fileInput" style="display: none" />
@@ -1229,9 +1510,9 @@
             <button id="confirm-cancel-all">Cancel</button>
           </div>
         </div>
-        <!-- confirm save window close -->
+        <!-- about -->
         <div id="about">
-          <div id="about-main">
+          <div id="about-main" class="scrollable">
             <div style="display: flex; align-items: center; gap: 1rem">
               <img src="icon/favicon.ico" alt="App Icon" width="48" height="48" />
               <div>
@@ -1239,30 +1520,45 @@
                 <div id="version-text"></div>
               </div>
             </div>
-            <p style="margin-top: 12px">
-              This is a free text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.
+            <p style="margin-top: 12px" id="description">
+              Free and open source text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.
             </p>
             <p>
               <span>GitHub:</span><br />
               <a href="https://github.com/sheetau/monapad" target="_blank">https://github.com/sheetau/monapad</a>
             </p>
             <p>
-              <span>Discord Server:</span><br />
+              <span id="discordServer">Discord Server:</span><br />
               <a href="https://discord.gg/2dXs5HwXuW" target="_blank">https://discord.gg/2dXs5HwXuW</a>
             </p>
             <p>
-              <span>Sheeta (Creator):</span><br />
+              <span id="creator">Sheeta (Creator):</span><br />
               <a href="https://linktr.ee/sheetau" target="_blank">https://linktr.ee/sheetavn</a>
             </p>
-            <p style="font-size: 13px; color: gray; margin-bottom: 0">
-              Disclaimer: This application is provided "as is" without any warranties. <br />
-              This application uses the Monaco Editor, an open-source project by Microsoft. <br />
-              © 2025 Sheeta. All rights reserved. <br />
+            <p style="margin-bottom: 0">
+              <span id="disclaimer-title">Disclaimer:</span><br />
+              <span id="disclaimer">
+                THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+                LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+                NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+                WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+                SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.<br /><br />
+                Copyright (c) 2025 Sheeta.
+              </span>
             </p>
           </div>
           <div id="about-footer">
             <button id="about-close">OK</button>
           </div>
+        </div>
+      </div>
+
+      <!-- drag file modal -->
+      <div id="file-drop-background">
+        <!-- file drop -->
+        <div id="file-drop">
+          <img src="icon/filedrop.png" />
+          <p>Open with Monapad</p>
         </div>
       </div>
     </div>

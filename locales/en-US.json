@@ -53,6 +53,7 @@
   "settings": {
     "font": "Font",
     "size": "Size",
+    "fontDescription": "Word wrap may misalign with proportional fonts. Try a monospaced font like Consolas if needed.",
     "layout": "Editor",
     "highlightLine": "Highlight current line",
     "lineNumbers": "Display line numbers",
@@ -60,9 +61,10 @@
     "syntaxHighlight": "Syntax highlight",
     "tabSize": "Tab Size",
     "language": "Language",
+    "langDescription": "Contribute translations <a href=\"https://github.com/sheetau/monapad/blob/main/LANGUAGE.md\" target=\"_blank\">here</a>.",
     "customTheme": "Custom Theme",
     "openThemeFolder": "Open Theme Folder",
-    "customThemeDescription": "You can apply custom themes by creating CSS files in this folder.<br />See the <a href=\"https://github.com/sheetau/monapad\" target=\"_blank\">GitHub page</a> for details."
+    "customThemeDescription": "Apply custom themes by creating CSS files in this folder. Details <a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">here</a>."
   },
   "modal": {
     "fileDrop": "Open with Monapad",
@@ -73,8 +75,9 @@
     "confirmSaveWindow": "Do you want to save the changes?",
     "saveAll": "Save All & Exit",
     "discardAll": "Discard & Exit",
-    "description": "This is a free text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.",
+    "description": "Free and open source text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.",
     "discordServer": "Discord Server:",
-    "creator": "Sheeta (Creator):"
+    "creator": "Sheeta (Creator):",
+    "disclaimer": "Disclaimer:"
   }
 }

@@ -53,6 +53,7 @@
   "settings": {
     "font": "フォント",
     "size": "サイズ",
+    "fontDescription": "非等幅フォントでは折り返しがずれる場合があります。気になる方はConsolasなどの等幅フォントをご利用ください。",
     "layout": "エディタ",
     "highlightLine": "現在行をハイライト",
     "lineNumbers": "行番号を表示",
@@ -60,9 +61,10 @@
     "syntaxHighlight": "シンタックスハイライト",
     "tabSize": "インデント幅",
     "language": "言語",
+    "langDescription": "翻訳の貢献は<a href=\"https://github.com/sheetau/monapad/blob/main/LANGUAGE.md\" target=\"_blank\">こちら</a>。",
     "customTheme": "カスタムテーマ",
     "openThemeFolder": "テーマフォルダを開く",
-    "customThemeDescription": "CSSファイルをこのフォルダに作ることでカスタムテーマを適用できます。<br />詳細は<a href=\"https://github.com/sheetau/monapad\" target=\"_blank\">GitHubページ</a>を参照してください。"
+    "customThemeDescription": "CSSファイルをこのフォルダに作ることでカスタムテーマを適用できます。詳細は<a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">こちら</a>。"
   },
   "modal": {
     "fileDrop": "Monapadで開く",
@@ -73,8 +75,9 @@
     "confirmSaveWindow": "変更内容を保存しますか？",
     "saveAll": "すべて保存して終了",
     "discardAll": "破棄して終了",
-    "description": "Sheetaがデザインと開発を行った、Visual Studio Codeと同じMonacoエディタを利用するフリーのテキストエディタ。",
+    "description": "Sheetaが制作した、Visual Studio Codeと同じMonacoエディタを利用するフリーでオープンソースのテキストエディタ。",
     "discordServer": "Discordサーバー:",
-    "creator": "Sheeta (開発者):"
+    "creator": "Sheeta (開発者):",
+    "disclaimer": "免責事項:"
   }
 }
