@@ -130,14 +130,28 @@
   --md-string-html: #aad94c; /* <img src="center"> */
 }
 
+/* monaco editor */
 /* markdown bracket highlighting color */
 .monaco-editor .bracket-highlighting-0,
 .monaco-editor .bracket-highlighting-1,
 .monaco-editor .bracket-highlighting-2 {
   color: #39bae6 !important;
 }
+/* go to line widget input focus border */
+:focus-visible {
+  outline: var(--highlight) solid 1px;
+  border-radius: 2px;
+}
+/* remove right gap in go to line widget */
+.monaco-action-bar.quick-input-inline-action-bar {
+  display: none !important;
+}
+#editor {
+  margin-top: 35px;
+  border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
+}
 
-/* highlight button, modal */
+/* modal */
 #confirm-save p,
 #confirm-save-window p {
   color: var(--shadow);
@@ -161,18 +175,7 @@
   font-weight: 500;
 }
 
-/* go to line widget input focus border */
-:focus-visible {
-  outline: var(--highlight) solid 1px;
-  border-radius: 2px;
-}
-
-/* remove right gap in go to line widget */
-.monaco-action-bar.quick-input-inline-action-bar {
-  display: none !important;
-}
-
-/* svg */
+/* button, svg */
 line,
 rect,
 polyline {
@@ -187,8 +190,6 @@ polyline {
   background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23bfbdb6" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
     no-repeat center;
 }
-
-/* color disabled */
 #menu button .shortcut,
 #custom-context-menu button .shortcut,
 #tab-context-menu button .shortcut {
@@ -205,11 +206,17 @@ polyline {
   stroke: var(--shadow) !important;
 }
 
-/* tab */
+/* toolbar */
 #toolbar {
   position: fixed;
   width: 100%;
   overflow: visible !important;
+}
+#toolbar,
+#menu-button,
+#add-tab,
+.window-button {
+  background: var(--color1);
 }
 #menu-button svg {
   width: 16px;
@@ -351,18 +358,11 @@ polyline {
 .tab:first-of-type:not(.active)::after {
   margin-left: -2px;
 }
+.clear-recent-btn {
+  color: var(--warn) !important;
+}
 
-/* editor, toolbar, statusbar, menu, settings */
-#editor {
-  margin-top: 35px;
-  border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
-}
-#toolbar,
-#menu-button,
-#add-tab,
-.window-button {
-  background: var(--color1);
-}
+/* status bar */
 #status-bar {
   color: var(--shadow);
   border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
@@ -371,6 +371,8 @@ polyline {
 #status-right {
   margin-top: -1px;
 }
+
+/* settings menu */
 #settings-menu {
   border-top: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
   border-left: 1px solid color-mix(in srgb, var(--editorText) 10%, transparent);
@@ -378,9 +380,6 @@ polyline {
 #settings-menu h1 {
   color: var(--shadow);
   opacity: 1;
-}
-.clear-recent-btn {
-  color: var(--warn) !important;
 }
 .size-change-btn {
   width: 25px;
@@ -392,10 +391,7 @@ polyline {
 /* syntax, disclaimer, description */
 .sub-text,
 #disclaimer,
-#customThemeDescription {
+.settings-info {
   color: var(--shadow);
   opacity: 1;
-}
-#customThemeDescription a {
-  color: color-mix(in srgb, var(--highlight) 75%, transparent) !important;
 }
