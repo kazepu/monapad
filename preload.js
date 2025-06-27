@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   readFile: (filePath) => ipcRenderer.invoke("file:read", filePath),
   showMessageBox: (options) => ipcRenderer.invoke("show-message-box", options),
   createNewWindow: () => ipcRenderer.invoke("window:createNew"),
+  createNewWindowWithTab: (tabData) => ipcRenderer.invoke("window:createNewWithTab", tabData),
+  onLoadTabData: (callback) => ipcRenderer.on("load-tab-data", (event, tabData) => callback(tabData)),
   fileExists: (filePath) => ipcRenderer.invoke("file:exists", filePath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openPath: (path) => ipcRenderer.invoke("open-path", path),

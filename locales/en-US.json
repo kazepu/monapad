@@ -48,7 +48,8 @@
     "closeToRight": "Close to the Right",
     "closeSaved": "Close Saved",
     "copyPath": "Copy Path",
-    "openPath": "Open Path"
+    "openPath": "Open Path",
+    "openInNewWindow": "Open in New Window"
   },
   "settings": {
     "font": "Font",

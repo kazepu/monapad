@@ -29,7 +29,7 @@
         --editorText: #ffffff; /* text color */
         --btnHover: #666; /* modal button hover */
         --highlight: #569cd6;
-        --btnHighlight: var(--highlight); /* modal highlight button */
+        --btnHighlight: #3074ac; /* modal highlight button */
         --windowClose: #e81123; /* window close */
         --warn: #cf5d6e; /* deleted file title */
 
@@ -812,13 +812,10 @@
         cursor: pointer;
         margin-top: 15px;
       }
-
-      #custom-context-menu.menu {
-        overflow-y: auto;
-        max-height: calc(100vh - 12.5px - 35px);
-      }
       #custom-context-menu.menu,
       #tab-context-menu.menu {
+        overflow-y: auto;
+        max-height: calc(100vh - 12.5px - 35px);
         position: absolute;
         background: var(--color2);
         border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
@@ -851,6 +848,9 @@
       #tab-context-menu button .label {
         display: inline-block;
         width: 70%;
+      }
+      #tab-context-menu button[data-action="openInNewWindow"] .label {
+        width: 100%;
       }
       #custom-context-menu button .shortcut,
       #tab-context-menu button .shortcut {
@@ -1271,7 +1271,7 @@
       </div>
 
       <!-- tab context menu -->
-      <div id="tab-context-menu" style="display: none; position: absolute" class="menu">
+      <div id="tab-context-menu" style="display: none; position: absolute" class="menu scrollable">
         <button data-action="close">
           <span class="label">Close</span>
           <span class="shortcut">Ctrl + W</span>
@@ -1291,6 +1291,10 @@
         </button>
         <button data-action="openPath">
           <span class="label">Open Path</span>
+        </button>
+        <div class="hr"></div>
+        <button data-action="openInNewWindow">
+          <span class="label">Open in New Window</span>
         </button>
       </div>
 

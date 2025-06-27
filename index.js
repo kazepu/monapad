@@ -60,6 +60,7 @@ let dragIndex = -1;
 let zoomLevel = 1;
 let currentTab = { content: "", selection: null, fontSize: persistentFontSize };
 let tabData = [];
+let recentlyClosedFiles = [];
 let statusBarVisible = localStorage.getItem("statusBarVisible") !== "false";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentFilePath = `${i18next.t("file.untitled")}.txt`;
@@ -98,6 +99,39 @@ let currentWatchedCssFile = null;
 // app version
 window.electronAPI.getAppVersion().then((version) => {
   document.querySelector("#version-text").textContent = `v${version}`;
+});
+
+// receive data on open in new window
+window.electronAPI.onLoadTabData((receivedTabData) => {
+  // remove existing initial tab
+  if (tabData.length === 1 && !tabData[0].content.trim() && !tabData[0].path) {
+    const defaultTab = tabData[0];
+    tabs.removeChild(defaultTab.element);
+    tabData = [];
+  }
+
+  // create new tab
+  const newTab = createTab(receivedTabData.name, receivedTabData.content, receivedTabData.path);
+  const newTabData = tabData[tabData.length - 1];
+
+  // restore tab data
+  newTabData.isFileSaved = receivedTabData.isFileSaved;
+  newTabData.originalContent = receivedTabData.originalContent;
+  newTabData.fontSize = receivedTabData.fontSize;
+  newTabData.wordWrap = receivedTabData.wordWrap;
+  newTabData.isMarkdown = receivedTabData.isMarkdown;
+
+  // restore save state
+  if (!receivedTabData.isFileSaved) {
+    const close = newTabData.element.querySelector(".close");
+    if (close) close.classList.add("show-unsaved");
+  }
+
+  if (receivedTabData.hasReloadButton) {
+    reloadButton(newTabData, receivedTabData.path, "add");
+  }
+
+  switchTab(newTabData);
 });
 
 const langSwitcher = document.getElementById("langSwitcher");
@@ -165,6 +199,8 @@ function updateMenuLabels() {
   document.querySelector('button[data-action="closeSaved"] .label').textContent = i18next.t("tabMenu.closeSaved");
   document.querySelector('button[data-action="copyPath"] .label').textContent = i18next.t("tabMenu.copyPath");
   document.querySelector('button[data-action="openPath"] .label').textContent = i18next.t("tabMenu.openPath");
+  document.querySelector('button[data-action="openInNewWindow"] .label').textContent =
+    i18next.t("tabMenu.openInNewWindow");
 
   // settings
   document.querySelector("#settings-menu .font").textContent = i18next.t("settings.font");
@@ -1400,6 +1436,8 @@ async function attemptCloseTab(data) {
       isModalDisplayed = true;
 
       const actuallyCloseTab = () => {
+        if (data.path) addToRecentlyClosedFiles(data.path);
+
         const index = tabData.indexOf(data);
         tabs.removeChild(tab);
         tabData = tabData.filter((t) => t !== data);
@@ -1490,6 +1528,7 @@ async function attemptCloseTab(data) {
     }
 
     // close immediately when save is not required
+    if (data.path) addToRecentlyClosedFiles(data.path);
     const index = tabData.indexOf(data);
     tabs.removeChild(tab);
     tabData = tabData.filter((t) => t !== data);
@@ -1527,6 +1566,25 @@ async function attemptCloseTab(data) {
 
     resolve("closed");
   });
+}
+
+// add to recently closed files
+function addToRecentlyClosedFiles(filePath) {
+  if (!filePath) return;
+  recentlyClosedFiles = recentlyClosedFiles.filter((path) => path !== filePath);
+  recentlyClosedFiles.unshift(filePath);
+  if (recentlyClosedFiles.length > 10) {
+    recentlyClosedFiles = recentlyClosedFiles.slice(0, 10);
+  }
+}
+// open recently closed files
+async function reopenRecentlyClosedFile() {
+  if (recentlyClosedFiles.length === 0) {
+    console.log("No recently closed files to reopen");
+    return;
+  }
+  const filePath = recentlyClosedFiles.shift();
+  await loadFileByPath(filePath);
 }
 
 // close window
@@ -1708,10 +1766,12 @@ window.electronAPI.onFileChanged((event, { filePath, eventType }) => {
     // if file is not found
     targetTab.element.querySelector(".name").classList.add("warn");
     reloadButton(targetTab, null, "remove");
+    if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
   } else if (eventType === "change") {
     // if file is changed
     targetTab.element.querySelector(".name").classList.remove("warn");
     handleFileChange(targetTab, filePath);
+    if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
   }
 });
 
@@ -1729,11 +1789,13 @@ async function handleFileChange(targetTab, filePath) {
     // line-through name if file is not found. remove reload button
     nameEl.classList.add("warn");
     reloadButton(targetTab, null, "remove");
+    if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
     return;
   }
 
   // remove line-through if file is found
   nameEl.classList.remove("warn");
+  if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
 
   if (targetTab.isFileSaved && (content === targetTab._lastExternalContent || content === targetTab.originalContent)) {
     reloadButton(targetTab, null, "remove");
@@ -2151,15 +2213,21 @@ document.addEventListener("contextmenu", (e) => {
 function updateTabContextMenuState(menu, tab) {
   const copyPathBtn = menu.querySelector('[data-action="copyPath"]');
   const openPathBtn = menu.querySelector('[data-action="openPath"]');
+  const openInNewWindowBtn = menu.querySelector('[data-action="openInNewWindow"]');
 
   const hasPath = tab && tab.path;
+  const isWarned = tab?.element?.querySelector(".warn") !== null;
 
   if (copyPathBtn) {
-    copyPathBtn.classList.toggle("disabled", !hasPath);
+    copyPathBtn.classList.toggle("disabled", !hasPath || isWarned);
   }
 
   if (openPathBtn) {
-    openPathBtn.classList.toggle("disabled", !hasPath);
+    openPathBtn.classList.toggle("disabled", !hasPath || isWarned);
+  }
+
+  if (openInNewWindowBtn) {
+    openInNewWindowBtn.classList.toggle("disabled", isWarned);
   }
 }
 
@@ -2174,6 +2242,61 @@ async function closeTabsSequentially(tabsToClose) {
       // If user cancelled, stop the process
       if (closed === "cancelled") {
         break;
+      }
+    }
+  }
+}
+
+async function openTabInNewWindow(targetTabData) {
+  if (!targetTabData) return;
+
+  const tabInfo = {
+    name: targetTabData.name,
+    content: targetTabData.content,
+    path: targetTabData.path,
+    isFileSaved: targetTabData.isFileSaved,
+    originalContent: targetTabData.originalContent,
+    fontSize: targetTabData.fontSize,
+    wordWrap: targetTabData.wordWrap,
+    isMarkdown: targetTabData.isMarkdown,
+    hasReloadButton: targetTabData.element?.classList.contains("has-reload-button"),
+  };
+
+  // create new window, send tab info
+  await window.electronAPI.createNewWindowWithTab(tabInfo);
+
+  // remove tab from original window whether saved or not
+  const index = tabData.indexOf(targetTabData);
+  tabs.removeChild(targetTabData.element);
+  tabData = tabData.filter((t) => t !== targetTabData);
+
+  if (targetTabData.element.classList.contains("active")) {
+    if (tabData.length) {
+      const newIndex = index > 0 ? index - 1 : 0;
+      switchTab(tabData[newIndex]);
+      setTimeout(() => monacoEditor?.focus(), 0);
+    } else {
+      if (monacoEditor) monacoEditor.setValue("");
+      currentTab = null;
+      createTab();
+
+      // reset max width when last tab is closed
+      fixedTabsWidth = null;
+      tabs.style.maxWidth = "";
+
+      switchTab(tabData[0]);
+      setTimeout(() => monacoEditor?.focus(), 0);
+    }
+  } else {
+    const currentActive = tabData.find((t) => t.element.classList.contains("active"));
+    if (currentActive) {
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.classList.remove("prev-active");
+      });
+
+      const prev = currentActive.element.previousElementSibling;
+      if (prev && prev.classList.contains("tab")) {
+        prev.classList.add("prev-active");
       }
     }
   }
@@ -2234,6 +2357,10 @@ tabContextMenu.addEventListener("click", async (e) => {
           console.error("Failed to open path:", err);
         }
       }
+      break;
+
+    case "openInNewWindow":
+      await openTabInNewWindow(targetTab);
       break;
   }
 });
@@ -2379,8 +2506,13 @@ window.addEventListener("keydown", async (e) => {
     e.preventDefault();
     openFile();
   }
+  // Ctrl + Shift + T
+  if (e.ctrlKey && e.shiftKey && e.code === "KeyT") {
+    e.preventDefault();
+    await reopenRecentlyClosedFile();
+  }
   // Ctrl + T
-  if (e.ctrlKey && e.code === "KeyT") {
+  else if (e.ctrlKey && !e.shiftKey && e.code === "KeyT") {
     e.preventDefault();
     createTab();
     switchTab(tabData.at(-1));

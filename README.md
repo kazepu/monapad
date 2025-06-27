@@ -35,6 +35,7 @@ The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting i
 ## Shortcuts:
 
 - Ctrl+T to create new tab.
+- Ctrl+Shift+T to reopen recently closed tab.
 - Ctrl+W to close current tab.
 - Ctrl+Tab to switch between tabs.
 - Ctrl+Num(1-9) to quickly switch to specified tab.

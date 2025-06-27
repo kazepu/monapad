@@ -48,7 +48,8 @@
     "closeToRight": "右側を閉じる",
     "closeSaved": "保存済みを閉じる",
     "copyPath": "パスをコピー",
-    "openPath": "パスを開く"
+    "openPath": "パスを開く",
+    "openInNewWindow": "新規ウィンドウで開く"
   },
   "settings": {
     "font": "フォント",

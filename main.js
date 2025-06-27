@@ -78,10 +78,19 @@ function createWindow() {
   });
 }
 
-function createNewWindow() {
+function createNewWindow(parentWindow) {
   const windowBounds = store.get("windowBounds") || { width: 800, height: 600 };
 
+  let x, y;
+  if (parentWindow) {
+    const parentBounds = parentWindow.getBounds();
+    x = parentBounds.x + 30;
+    y = parentBounds.y + 30;
+  }
+
   const win = new BrowserWindow({
+    x,
+    y,
     width: windowBounds.width,
     height: windowBounds.height,
     minWidth: 400,
@@ -129,6 +138,17 @@ function createNewWindow() {
       event.preventDefault();
       shell.openExternal(url);
     }
+  });
+
+  return win;
+}
+
+function createNewWindowWithTab(parentWindow, tabData) {
+  const newWindow = createNewWindow(parentWindow);
+
+  // send tab data when new window is ready
+  newWindow.webContents.once("did-finish-load", () => {
+    newWindow.webContents.send("load-tab-data", tabData);
   });
 }
 
@@ -196,7 +216,15 @@ ipcMain.on("unwatch-css-file", (event, filePath) => {
 });
 
 // File operations, window control handler
-ipcMain.handle("window:createNew", createNewWindow);
+ipcMain.handle("window:createNew", (event) => {
+  const parentWindow = BrowserWindow.fromWebContents(event.sender);
+  createNewWindow(parentWindow);
+});
+
+ipcMain.handle("window:createNewWithTab", (event, tabData) => {
+  const parentWindow = BrowserWindow.fromWebContents(event.sender);
+  createNewWindowWithTab(parentWindow, tabData);
+});
 
 ipcMain.handle("dialog:openFile", async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ["openFile"] });
