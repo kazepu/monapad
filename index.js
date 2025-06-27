@@ -101,6 +101,18 @@ window.electronAPI.getAppVersion().then((version) => {
   document.querySelector("#version-text").textContent = `v${version}`;
 });
 
+// file open on launch
+window.electronAPI.onOpenFile(async (filePath) => {
+  try {
+    await loadFileByPath(filePath);
+    console.log("File opened successfully via association:", filePath);
+    window.electronLog.info("File opened successfully via association:", filePath);
+  } catch (error) {
+    console.error("Failed to open file via association:", error);
+    window.electronLog.error("Failed to open file via association:", error);
+  }
+});
+
 // receive data on open in new window
 window.electronAPI.onLoadTabData((receivedTabData) => {
   // remove existing initial tab
@@ -606,7 +618,7 @@ document.getElementById("toggleSyntaxHighlight").onclick = () => {
   applyDecorations();
 };
 
-// open custom theme button
+// open custom theme folder button
 document.getElementById("openThemeFolder").addEventListener("click", async () => {
   try {
     const userDataPath = await window.electronAPI.getUserDataPath();
@@ -1872,17 +1884,6 @@ async function openFile() {
   if (!filePath) return;
   await loadFileByPath(filePath);
 }
-
-window.electronAPI.onOpenFile(async (filePath) => {
-  try {
-    await loadFileByPath(filePath);
-    console.log("File opened successfully via association:", filePath);
-    window.electronLog.info("File opened successfully via association:", filePath);
-  } catch (error) {
-    console.error("Failed to open file via association:", error);
-    window.electronLog.error("Failed to open file via association:", error);
-  }
-});
 
 // file load hadling
 async function loadFileByPath(filePath) {

@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // font
   getFonts: () => ipcRenderer.invoke("get-fonts"),
 
+  // open file on launch
   onOpenFile: (cb) => ipcRenderer.on("open-file", (_, path) => cb(path)),
   removeOpenFileListener: () => ipcRenderer.removeAllListeners("open-file"),
 
