@@ -30,11 +30,41 @@ If approved, all users will be able to download and use it from the repository.
 
 ## Creating Your Own Theme
 
-You can either edit the official custom themes, or open the developer tools with `Shift + Ctrl + I` and inspect elements as you create your own theme.
+You can either edit the official custom themes, or open the developer tools with `Shift + Ctrl + I` and inspect elements as you create your own theme.  
+Make sure to include at least the following variables:
+
+```css
+:root {
+  --color1: #121214 !important; /* (dark theme) editor, modal background */
+  --color2: #1a1a1e !important; /* (dark theme) toolbar, statusbar, menu, message background */
+  --color3: #242429 !important; /* (dark theme) button hover, modal button */
+  --editorText: #ffffff; /* text color */
+
+  /* monaco editor color */
+  /* 6 and 8 digit hex are allowed */
+  --vscode-editor-background: var(--color1);
+  --vscode-editor-foreground: var(--editorText);
+  --vscode-editor-lineHighlightBackground: var(--color2);
+  --vscode-editor-lineHighlightBorder: #00000000;
+  --vscode-editorWidget-background: var(--color2);
+  --vscode-editorHoverWidget-background: var(--color2);
+  --vscode-quickInputList-focusBackground: var(--color3);
+  --vscode-input-background: var(--color1);
+  --vscode-list-activeSelectionBackground: var(--color3);
+  --vscode-list-dropBackground: var(--color3);
+  --vscode-menu-selectionBackground: var(--color3);
+  --vscode-list-hoverBackground: var(--color3);
+  --vscode-editorStickyScrollHover-background: var(--color3);
+  --vscode-button-hoverBackground: var(--color3);
+  --vscode-badge-background: var(--color3);
+  --vscode-editorWidget-border: var(--color3);
+  --vscode-editorHoverWidget-border: var(--color3);
+}
+```
 
 Changing color can be done simply by redefining the default variables.  
-You can refer to [this official theme](https://github.com/sheetau/monapad/tree/main/customthemes/ayu/Ayu.css) to see how it's done.  
-Below are the default variables available for customization (redefine and use them within the `:root` selector):
+You can refer to [this official theme](https://github.com/sheetau/monapad/tree/main/customthemes/ayu/Ayu.css) to see more in-depth how it's done.  
+Below are all the default variables available for customization (redefine and use them within the `:root` selector):
 
 ### Monapad Theme Color Variables
 
