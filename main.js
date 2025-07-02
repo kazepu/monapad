@@ -63,6 +63,12 @@ function createWindow() {
     store.set("windowBounds", { width, height });
   });
 
+  mainWindow.on("close", (e) => {
+    if (mainWindow.webContents.isDestroyed()) return;
+    e.preventDefault();
+    mainWindow.webContents.send("attempt-close-window");
+  });
+
   // open link with default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
@@ -125,6 +131,12 @@ function createNewWindow(parentWindow) {
   win.on("resize", () => {
     const { width, height } = win.getBounds();
     store.set("windowBounds", { width, height });
+  });
+
+  win.on("close", (e) => {
+    if (win.webContents.isDestroyed()) return;
+    e.preventDefault();
+    win.webContents.send("attempt-close-window");
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -340,54 +352,55 @@ ipcMain.on("window:toggleMaximize", (event) => {
   }
 });
 
+// call window close from toolbar button
 ipcMain.on("window:close", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
-  window?.close();
+  window?.destroy();
 });
 
 // print
-ipcMain.on("print-content", async (event, { text, fontFamily }) => {
-  const escapeHTML = (str) =>
-    str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+// ipcMain.on("print-content", async (event, { text, fontFamily }) => {
+//   const escapeHTML = (str) =>
+//     str
+//       .replace(/&/g, "&amp;")
+//       .replace(/</g, "&lt;")
+//       .replace(/>/g, "&gt;")
+//       .replace(/"/g, "&quot;")
+//       .replace(/'/g, "&#39;");
 
-  const html = `
-    <html>
-      <body>
-        <pre style="
-            font-family: ${fontFamily};
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            max-width: 100%;
-            box-sizing: border-box;
-            padding: 1in;
-        ">
-        ${escapeHTML(text)}
-        </pre>
-      </body>
-    </html>
-  `;
+//   const html = `
+//     <html>
+//       <body>
+//         <pre style="
+//             font-family: ${fontFamily};
+//             white-space: pre-wrap;
+//             word-wrap: break-word;
+//             max-width: 100%;
+//             box-sizing: border-box;
+//             padding: 1in;
+//         ">
+//         ${escapeHTML(text)}
+//         </pre>
+//       </body>
+//     </html>
+//   `;
 
-  const printWindow = new BrowserWindow({
-    show: true,
-    transparent: true,
-    frame: false,
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
-  });
+//   const printWindow = new BrowserWindow({
+//     show: true,
+//     transparent: false,
+//     frame: false,
+//     webPreferences: { nodeIntegration: true, contextIsolation: false },
+//   });
 
-  await printWindow.loadURL(`data:text/html,${encodeURIComponent(html)}`);
+//   await printWindow.loadURL(`data:text/html,${encodeURIComponent(html)}`);
 
-  printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
-    if (!success) {
-      log.error("[main] print failed:", failureReason);
-    }
-    printWindow.close();
-  });
-});
+//   printWindow.webContents.print({ silent: false, printBackground: true }, (success, failureReason) => {
+//     if (!success) {
+//       log.error("[main] print failed:", failureReason);
+//     }
+//     printWindow.close();
+//   });
+// });
 
 function getFilePathFromArgv(argv) {
   log.info("Debug: process.argv =", argv);

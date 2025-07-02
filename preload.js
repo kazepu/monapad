@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openPath: (path) => ipcRenderer.invoke("open-path", path),
   onWindowFocus: (callback) => ipcRenderer.on("window-focus", (event, focused) => callback(focused)),
+  onAttemptCloseWindow: (callback) => ipcRenderer.on("attempt-close-window", callback),
 
   // file watch
   watchFile: (filePath) => ipcRenderer.invoke("file:watch", filePath),
@@ -29,7 +30,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   toggleMaximizeWindow: () => ipcRenderer.send("window:toggleMaximize"),
   closeWindow: () => ipcRenderer.send("window:close"),
 
-  printContent: (text) => ipcRenderer.send("print-content", text),
+  // printContent: (text) => ipcRenderer.send("print-content", text),
 
   // font
   getFonts: () => ipcRenderer.invoke("get-fonts"),

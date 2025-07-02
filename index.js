@@ -13,18 +13,27 @@ const openRecentBtn = document.getElementById("openRecent");
 const recentMenu = document.getElementById("recent-menu");
 const newWindowBtn = document.getElementById("newWindowBtn");
 const newTabBtn = document.getElementById("newTabBtn");
-const fontSizeValue = document.getElementById("font-size-value");
-const fontSizeDecrease = document.getElementById("font-size-decrease");
-const fontSizeIncrease = document.getElementById("font-size-increase");
-const tabSizeValue = document.getElementById("tab-size-value");
-const tabSizeDecrease = document.getElementById("tab-size-decrease");
-const tabSizeIncrease = document.getElementById("tab-size-increase");
 const fontFamilySelect = document.getElementById("font-family-select");
 const settingsButton = document.getElementById("settingsBtn");
 const settingsMenu = document.getElementById("settings-menu");
 const customContextMenu = document.getElementById("custom-context-menu");
 const tabContextMenu = document.getElementById("tab-context-menu");
 const excludedIds = ["changeTheme", "openRecent"]; // buttons that dont close menu on click
+
+// font size
+let wheelListener = null;
+const fontSizeValue = document.getElementById("font-size-value");
+const fontSizeDecrease = document.getElementById("font-size-decrease");
+const fontSizeIncrease = document.getElementById("font-size-increase");
+const STORAGE_KEY = "monacoFontSizePersistent";
+let persistentFontSize = Number(localStorage.getItem(STORAGE_KEY)) || 16;
+let fontSize = persistentFontSize;
+
+// tab size
+const tabSizeValue = document.getElementById("tab-size-value");
+const tabSizeDecrease = document.getElementById("tab-size-decrease");
+const tabSizeIncrease = document.getElementById("tab-size-increase");
+let tabSize = Math.min(10, Math.max(1, parseInt(localStorage.getItem("tabSize")) || 4));
 
 // status bar
 const statusLeft = document.getElementById("status-left");
@@ -47,10 +56,6 @@ const about = document.getElementById("about");
 const fileDropBox = document.getElementById("file-drop-background");
 const fileDrop = document.getElementById("file-drop");
 
-const STORAGE_KEY = "monacoFontSizePersistent";
-let persistentFontSize = Number(localStorage.getItem(STORAGE_KEY)) || 16;
-let fontSize = persistentFontSize;
-let tabSize = Math.min(10, Math.max(1, parseInt(localStorage.getItem("tabSize")) || 4));
 let draggingTab = null;
 let dragStartX = 0;
 let originalX = 0;
@@ -69,9 +74,10 @@ const defaultSettings = {
   lineNumbers: false,
   minimap: true,
   syntaxHighlight: true,
+  folding: false,
 };
 const settings = JSON.parse(localStorage.getItem("editorSettings")) || defaultSettings;
-let selectedFontFamily = localStorage.getItem("selectedFontFamily") || "Figtree";
+let selectedFontFamily = localStorage.getItem("selectedFontFamily") || "Iosevka";
 let monacoEditor = null;
 
 // tabs hover state, width handling
@@ -87,6 +93,7 @@ let isMarkdownOn = false;
 
 // modal display state
 let isModalDisplayed = false;
+let dragCounter = 0;
 
 // store right clicked tab
 let rightClickedTab = null;
@@ -176,7 +183,7 @@ function updateMenuLabels() {
   document.querySelector("#saveAsFileBtn .label").textContent = i18next.t("menu.saveAs");
   document.querySelector("#triggerFindBtn .label").textContent = i18next.t("menu.find");
   document.querySelector("#triggerReplaceBtn .label").textContent = i18next.t("menu.replace");
-  document.getElementById("print-button").textContent = i18next.t("menu.print");
+  // document.getElementById("print-button").textContent = i18next.t("menu.print");
   document.querySelector("#changeTheme .btn-text").textContent = i18next.t("menu.theme");
   document.querySelector("#toggleStatusBar .btn-text").textContent = i18next.t("menu.statusBar");
   document.getElementById("settingsBtn").textContent = i18next.t("menu.settings");
@@ -223,6 +230,7 @@ function updateMenuLabels() {
   document.querySelector("#line-num span").textContent = i18next.t("settings.lineNumbers");
   document.querySelector("#minimap span").textContent = i18next.t("settings.displayMinimap");
   document.querySelector("#toggleSyntaxHighlight span").textContent = i18next.t("settings.syntaxHighlight");
+  document.querySelector("#toggleFolding span").textContent = i18next.t("settings.folding");
   document.querySelector("#settings-menu .tabSize").textContent = i18next.t("settings.tabSize");
   document.getElementById("settingsLanguage").textContent = i18next.t("settings.language");
   document.getElementById("langDescription").innerHTML = i18next.t("settings.langDescription");
@@ -359,6 +367,59 @@ monaco.languages.setMonarchTokensProvider("monapad", {
   },
 });
 
+monaco.languages.registerFoldingRangeProvider("monapad", {
+  provideFoldingRanges(model, context, token) {
+    const ranges = [];
+    const lines = model.getLineCount();
+
+    const headingRegexes = [
+      { level: 1, regex: /^\s*#\s[^#]/ },
+      { level: 2, regex: /^\s*##\s[^#]/ },
+      { level: 3, regex: /^\s*###\s[^#]/ },
+    ];
+
+    const headings = [];
+
+    for (let lineNumber = 1; lineNumber <= lines; lineNumber++) {
+      const line = model.getLineContent(lineNumber);
+      for (const { level, regex } of headingRegexes) {
+        if (regex.test(line)) {
+          headings.push({ lineNumber, level });
+          break;
+        }
+      }
+    }
+
+    for (let i = 0; i < headings.length; i++) {
+      const { lineNumber: startLine, level } = headings[i];
+      let endLine = lines;
+
+      for (let j = i + 1; j < headings.length; j++) {
+        if (headings[j].level <= level) {
+          endLine = headings[j].lineNumber - 1;
+          break;
+        }
+      }
+
+      // do not include empty line
+      while (endLine > startLine && model.getLineContent(endLine).trim() === "") {
+        endLine--;
+      }
+
+      // only when range is more than one line
+      if (endLine > startLine) {
+        ranges.push({
+          start: startLine,
+          end: endLine,
+          kind: monaco.languages.FoldingRangeKind.Region,
+        });
+      }
+    }
+
+    return ranges;
+  },
+});
+
 // apply colors to monaco editor
 function createCustomTheme() {
   const isDefaultTheme = ["dark", "onyx", "ash"].includes(currentTheme);
@@ -418,14 +479,11 @@ monaco.editor.defineTheme("custom-theme", createCustomTheme());
 
 monacoEditor = monaco.editor.create(editor, {
   language: "monapad",
-  wordWrap: "bounded",
-  wordWrapColumn: 1000,
+  wordWrap: "on",
   minimap: { enabled: settings.minimap, renderCharacters: true },
-  fontSize: persistentFontSize,
   renderLineHighlight: settings.lineHighlight ? "line" : "none",
   lineNumbers: settings.lineNumbers ? "on" : "off",
-  folding: false,
-  lineNumbersMinChars: settings.lineNumbers ? 4 : 2,
+  lineNumbersMinChars: 1,
   automaticLayout: true,
   scrollBeyondLastLine: false,
   padding: { top: 12, bottom: editor.clientHeight / 2 },
@@ -435,13 +493,15 @@ monacoEditor = monaco.editor.create(editor, {
   suggestOnTriggerCharacters: false,
   wordBasedSuggestions: false,
   matchBrackets: "never",
-  fontFamily: `"${selectedFontFamily}", "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif`,
+  fontSize: persistentFontSize,
+  fontFamily: `"${selectedFontFamily}", "Migu 1M", monospace`,
+  fontLigatures: true,
   unicodeHighlight: {
     nonBasicASCII: false,
     ambiguousCharacters: false,
     invisibleCharacters: false,
   },
-  autoClosingBrackets: false,
+  autoClosingBrackets: "never",
   contextmenu: false,
   renderIndentGuides: false,
   insertSpaces: false,
@@ -450,9 +510,57 @@ monacoEditor = monaco.editor.create(editor, {
     addExtraSpaceOnTop: false,
   },
   scrollbar: { horizontal: "hidden" },
+  folding: settings.folding,
+  foldingStrategy: "auto",
+  copyWithSyntaxHighlighting: false,
+  cursorSmoothCaretAnimation: false,
 });
 
-// # and -#
+monacoEditor.addAction({
+  id: "toggle-subtext",
+  label: "Toggle Subtext",
+  keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash], // Ctrl+/ または Cmd+/（Mac）
+  precondition: null,
+  keybindingContext: null,
+  run: function (ed) {
+    const model = ed.getModel();
+    const selections = ed.getSelections();
+
+    ed.pushUndoStop();
+    ed.executeEdits(
+      "toggle-subtext",
+      selections
+        .map((selection) => {
+          const startLine = selection.startLineNumber;
+          const endLine = selection.endLineNumber;
+          const edits = [];
+
+          for (let line = startLine; line <= endLine; line++) {
+            const lineContent = model.getLineContent(line);
+            if (/^\s*-# /.test(lineContent)) {
+              // remove subtext
+              const newText = lineContent.replace(/^(\s*)-# /, "$1");
+              edits.push({
+                range: new monaco.Range(line, 1, line, lineContent.length + 1),
+                text: newText,
+              });
+            } else {
+              // add subtext
+              edits.push({
+                range: new monaco.Range(line, 1, line, lineContent.length + 1),
+                text: `-# ${lineContent}`,
+              });
+            }
+          }
+
+          return edits;
+        })
+        .flat()
+    );
+    ed.pushUndoStop();
+  },
+});
+
 let currentDecorations = [];
 
 function applyDecorations() {
@@ -499,14 +607,6 @@ function applyDecorations() {
           options: { inlineClassName: "marker-transparent" },
         });
 
-        // only apply sub-text class to the full line if sub-text matched
-        if (className === "sub-text") {
-          decorations.push({
-            range: new monaco.Range(i + 1, startColumn, i + 1, line.length + 1),
-            options: { inlineClassName: "sub-text" },
-          });
-        }
-
         break; // first match only
       }
     }
@@ -548,14 +648,20 @@ applyDecorations();
 
 // get font using font-list and apply on launch
 window.electronAPI.getFonts().then((fonts) => {
+  const bundledFonts = ["Iosevka", "Migu 1M", "Figtree"];
   const cleanedFonts = fonts.map((f) => f.trim().replace(/^"|"$/g, ""));
+
+  bundledFonts.forEach((font) => {
+    if (!cleanedFonts.includes(font)) cleanedFonts.push(font);
+  });
+
   const sortedFonts = cleanedFonts.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
   sortedFonts.forEach((fontName) => {
     const option = document.createElement("option");
     option.value = fontName;
     option.textContent = fontName;
-    option.style.fontFamily = `"${fontName}", sans-serif`;
+    option.style.fontFamily = `"${fontName}", "Figtree", sans-serif`;
     fontFamilySelect.appendChild(option);
   });
 
@@ -571,12 +677,16 @@ fontFamilySelect.addEventListener("change", () => {
   applyFontToMonaco();
 });
 function applyFontToMonaco() {
-  let cleanFontFamily = selectedFontFamily;
-  if (cleanFontFamily.startsWith('"') && cleanFontFamily.endsWith('"')) {
-    cleanFontFamily = cleanFontFamily.slice(1, -1);
-  }
+  const cssFont = getCSSVar("--editor-font");
+  let cleanFontFamily = selectedFontFamily.replace(/^"|"$/g, "");
+
+  const finalFont = cssFont && cssFont.trim() ? cssFont : `"${cleanFontFamily}", "Migu 1M", monospace`;
+
   monacoEditor.updateOptions({
-    fontFamily: `${cleanFontFamily}, "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif`,
+    fontFamily: finalFont,
+  });
+  document.fonts.ready.then(() => {
+    monaco.editor.remeasureFonts();
   });
 }
 
@@ -585,11 +695,12 @@ function applySettings() {
   monacoEditor.updateOptions({
     renderLineHighlight: settings.lineHighlight ? "line" : "none",
     lineNumbers: settings.lineNumbers ? "on" : "off",
-    lineNumbersMinChars: settings.lineNumbers ? 4 : 2,
     minimap: {
       enabled: settings.minimap,
     },
+    folding: settings.folding,
   });
+  editor.style.marginLeft = settings.lineNumbers ? "20px" : "0px";
 
   document.querySelector("#line-highlight .checkmark").style.display = settings.lineHighlight ? "inline-block" : "none";
   document.querySelector("#line-num .checkmark").style.display = settings.lineNumbers ? "inline-block" : "none";
@@ -599,6 +710,7 @@ function applySettings() {
   document.querySelector("#toggleSyntaxHighlight .checkmark").style.display = settings.syntaxHighlight
     ? "inline-block"
     : "none";
+  document.querySelector("#toggleFolding .checkmark").style.display = settings.folding ? "inline-block" : "none";
 }
 
 function toggleSetting(key) {
@@ -617,6 +729,7 @@ document.getElementById("toggleSyntaxHighlight").onclick = () => {
   monaco.editor.setTheme("custom-theme");
   applyDecorations();
 };
+document.getElementById("toggleFolding").onclick = () => toggleSetting("folding");
 
 // open custom theme folder button
 document.getElementById("openThemeFolder").addEventListener("click", async () => {
@@ -643,8 +756,12 @@ function updatePersistentFontSize(newSize) {
   fontSizeValue.textContent = persistentFontSize;
   localStorage.setItem(STORAGE_KEY, persistentFontSize);
 
+  tabData.forEach((tab) => {
+    tab.fontSize = persistentFontSize;
+  });
+
   fontSize = persistentFontSize;
-  monacoEditor.updateOptions({ fontSize: persistentFontSize });
+  monacoEditor.updateOptions({ fontSize });
 
   fontSizeDecrease.classList.toggle("disabled", persistentFontSize <= 8);
   fontSizeIncrease.classList.toggle("disabled", persistentFontSize >= 40);
@@ -686,23 +803,30 @@ const updateFontSize = (newSize) => {
   fontSize = Math.max(8, Math.min(40, newSize));
   monacoEditor.updateOptions({ fontSize });
   if (currentTab) currentTab.fontSize = fontSize;
+  updateStatusBar();
 };
 
-const editorDomNode = monacoEditor.getDomNode();
-const scrollElement = editorDomNode.querySelector(".monaco-scrollable-element");
-
 // Ctrl + mouse wheel
-scrollElement.addEventListener(
-  "wheel",
-  (e) => {
+function attachCtrlWheelListener() {
+  const editorDomNode = monacoEditor.getDomNode();
+  if (!editorDomNode) return;
+  const scrollElement = editorDomNode.querySelector(".monaco-scrollable-element");
+  if (!scrollElement) return;
+
+  // remove last listner
+  if (wheelListener) {
+    scrollElement.removeEventListener("wheel", wheelListener);
+  }
+
+  wheelListener = (e) => {
     if (e.ctrlKey) {
       e.preventDefault();
       updateFontSize(fontSize + (e.deltaY < 0 ? 1 : -1));
-      updateStatusBar();
     }
-  },
-  { passive: false }
-);
+  };
+
+  scrollElement.addEventListener("wheel", wheelListener, { passive: false });
+}
 
 // Ctrl + + / -
 window.addEventListener("keydown", (e) => {
@@ -925,6 +1049,7 @@ async function applyCustomThemeCSS(themeName) {
 
 async function applyTheme(theme) {
   const themes = await window.electronAPI.getCustomThemes();
+  const root = document.documentElement;
 
   // set to dark if custom theme file doesn't exist
   if (!["dark", "onyx", "ash"].includes(theme) && !themes[theme]) {
@@ -935,6 +1060,10 @@ async function applyTheme(theme) {
 
   // override with custom theme if selected
   if (!["dark", "onyx", "ash"].includes(theme)) {
+    // Set default fallback colors (dark) for custom themes. hence !important is required in css.
+    root.style.setProperty("--color1", "#121214");
+    root.style.setProperty("--color2", "#1a1a1e");
+    root.style.setProperty("--color3", "#242429");
     const success = await applyCustomThemeCSS(theme);
     if (!success) {
       return;
@@ -947,8 +1076,6 @@ async function applyTheme(theme) {
     }
   }
 
-  const root = document.documentElement;
-
   if (theme === "dark") {
     root.style.setProperty("--color1", "#121214");
     root.style.setProperty("--color2", "#1a1a1e");
@@ -958,9 +1085,9 @@ async function applyTheme(theme) {
     root.style.setProperty("--color2", "#0c0c0e");
     root.style.setProperty("--color3", "#18181a");
   } else if (theme === "ash") {
-    root.style.setProperty("--color1", "#2c2d32");
-    root.style.setProperty("--color2", "#36373e");
-    root.style.setProperty("--color3", "#484950");
+    root.style.setProperty("--color1", "#232428");
+    root.style.setProperty("--color2", "#292b31");
+    root.style.setProperty("--color3", "#36393f");
   }
 
   monaco.editor.defineTheme("custom-theme", createCustomTheme());
@@ -989,6 +1116,7 @@ async function handleThemeButtonClick(event) {
   currentTheme = theme;
   localStorage.setItem("theme", theme);
   await applyTheme(theme);
+  applyFontToMonaco();
   updateActiveButton();
 }
 
@@ -1042,6 +1170,7 @@ window.electronAPI.onCssFileUpdated(async (path) => {
   if (currentWatchedCssFile === path && currentTheme) {
     console.log("Detected CSS update, reapplying theme...");
     await applyTheme(currentTheme);
+    applyFontToMonaco();
   }
 });
 
@@ -1051,11 +1180,11 @@ document.getElementById("saveAsFileBtn").addEventListener("click", saveAsFile);
 document.getElementById("toggleStatusBar").addEventListener("click", toggleStatusBar);
 
 // print button
-document.getElementById("print-button").addEventListener("click", () => {
-  const content = monacoEditor.getValue();
-  const fontFamily = monacoEditor.getRawOptions().fontFamily || "Consolas";
-  window.electronAPI.printContent({ text: content, fontFamily });
-});
+// document.getElementById("print-button").addEventListener("click", () => {
+//   const content = monacoEditor.getValue();
+//   const fontFamily = monacoEditor.getRawOptions().fontFamily || "Consolas";
+//   window.electronAPI.printContent({ text: content, fontFamily });
+// });
 
 // about button
 document.getElementById("aboutBtn").addEventListener("click", () => {
@@ -1068,6 +1197,7 @@ document.getElementById("about-close").addEventListener("click", () => {
   confirmBox.style.display = "none";
   about.style.display = "none";
   isModalDisplayed = false;
+  monacoEditor?.focus();
 });
 
 // window controls
@@ -1083,18 +1213,20 @@ document.getElementById("close-button").addEventListener("click", () => {
   attemptCloseWindow();
 });
 
+window.electronAPI.onAttemptCloseWindow(() => {
+  attemptCloseWindow();
+});
+
 // add tab (+) button
 addTabButton.onclick = () => {
   createTab();
   switchTab(tabData.at(-1));
-  setTimeout(() => monacoEditor.focus(), 0);
 };
 // new tab button
 newTabBtn.addEventListener("click", (e) => {
   e.preventDefault();
   createTab();
   switchTab(tabData.at(-1));
-  setTimeout(() => monacoEditor.focus(), 0);
 });
 
 // tabs hover state
@@ -1146,54 +1278,48 @@ newWindowBtn.addEventListener("click", () => {
 });
 
 // file drag & drop
-window.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  if (isModalDisplayed) {
-    e.dataTransfer.dropEffect = "none";
-    return;
-  }
-
+window.addEventListener("dragenter", (e) => {
+  if (isModalDisplayed) return;
   if (!e.dataTransfer.types.includes("Files")) return;
 
-  if (fileDropBox.style.display !== "flex") {
+  dragCounter++;
+  if (dragCounter === 1) {
     fileDropBox.style.display = "flex";
     fileDrop.style.display = "flex";
   }
 });
 
 window.addEventListener("dragleave", (e) => {
-  e.preventDefault();
-  if (isModalDisplayed) {
-    e.dataTransfer.dropEffect = "none";
-    return;
-  }
+  if (isModalDisplayed) return;
+  dragCounter = Math.max(0, dragCounter - 1);
 
-  fileDropBox.style.display = "none";
-  fileDrop.style.display = "none";
+  if (dragCounter === 0) {
+    fileDropBox.style.display = "none";
+    fileDrop.style.display = "none";
+  }
 });
 
 window.addEventListener("drop", async (e) => {
   e.preventDefault();
-  if (isModalDisplayed) {
-    e.dataTransfer.dropEffect = "none";
-    return;
-  }
+  dragCounter = 0;
 
   fileDropBox.style.display = "none";
   fileDrop.style.display = "none";
 
-  if (!e.dataTransfer.files.length) return;
+  if (!e.dataTransfer.files.length || isModalDisplayed) return;
 
   const file = e.dataTransfer.files[0];
-  if (!file) return;
-
   const filePath = await window.electronAPI.getPathForFile(file);
-  if (!filePath) {
-    console.error("Failed to get file path.");
-    return;
-  }
+  if (filePath) await loadFileByPath(filePath);
+});
 
-  await loadFileByPath(filePath);
+window.addEventListener("dragover", (e) => {
+  e.preventDefault(); // prevent default to allow drop
+  if (isModalDisplayed) {
+    e.dataTransfer.dropEffect = "none";
+  } else {
+    e.dataTransfer.dropEffect = "copy";
+  }
 });
 
 // toggle statusbar
@@ -1233,16 +1359,21 @@ function updateStatusBar() {
 
   let lineEnding = "Unknown";
   if (eol === "\r\n") {
-    lineEnding = "Windows (CRLF)";
+    lineEnding = "CRLF";
   } else if (eol === "\n") {
-    lineEnding = "Unix (LF)";
+    lineEnding = "LF";
   } else if (eol === "\r") {
-    lineEnding = "Mac (CR)";
+    lineEnding = "CR";
   }
 
-  const selectedCharCount = model.getValueLengthInRange(monacoEditor.getSelection());
+  const selections = monacoEditor.getSelections();
+  let totalSelectedLength = 0;
+  if (selections && selections.length > 0) {
+    totalSelectedLength = selections.reduce((sum, sel) => sum + model.getValueLengthInRange(sel), 0);
+  }
+
   const selectionText =
-    selectedCharCount > 0 ? ` ${i18next.t("statusBar.selection", { count: selectedCharCount })}` : "";
+    totalSelectedLength > 0 ? ` ${i18next.t("statusBar.selection", { count: totalSelectedLength })}` : "";
 
   statusLeft.textContent = currentFilePath;
   statusLeft.title = currentFilePath;
@@ -1261,17 +1392,13 @@ function enableTabDragging(tab, data) {
   tab.addEventListener("mousedown", (e) => {
     if (e.button !== 0) return;
     if (e.target.closest(".close")) return;
+    switchTab(data);
     draggingTab = tab;
     dragIndex = tabData.indexOf(data);
     startX = e.clientX;
     currentX = 0;
     tab.style.transition = "none";
     tab.style.position = "relative";
-    tab.classList.add("tab-dragging");
-
-    monacoEditor.updateOptions({ renderLineHighlight: "none" });
-    monacoEditor.getDomNode().querySelector(".cursor").style.display = "none";
-
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
   });
@@ -1298,7 +1425,7 @@ function enableTabDragging(tab, data) {
 
         tabs.insertBefore(draggingTab, targetTab.nextSibling);
         monacoEditor.getDomNode()?.blur();
-        switchTab(currentTab, true);
+        switchTab(currentTab);
 
         const newRect = draggingTab.getBoundingClientRect();
         const deltaX = oldLeft - newRect.left;
@@ -1318,7 +1445,7 @@ function enableTabDragging(tab, data) {
 
         tabs.insertBefore(draggingTab, targetTab);
         monacoEditor.getDomNode()?.blur();
-        switchTab(currentTab, true);
+        switchTab(currentTab);
 
         const newRect = draggingTab.getBoundingClientRect();
         const deltaX = oldLeft - newRect.left;
@@ -1342,11 +1469,8 @@ function enableTabDragging(tab, data) {
     draggingTab.style.transform = "";
     draggingTab.style.position = "";
     draggingTab.style.pointerEvents = "";
-    tab.classList.remove("tab-dragging");
     draggingTab = null;
     dragIndex = -1;
-    monacoEditor.updateOptions({ renderLineHighlight: settings.lineHighlight ? "line" : "none" });
-    monacoEditor.getDomNode().querySelector(".cursor").style.display = "";
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
   }
@@ -1391,14 +1515,18 @@ function createTab(name, content = "", path = null) {
   tab.appendChild(close);
   tabs.appendChild(tab);
 
+  const model = monaco.editor.createModel(content, "monapad");
+
   const data = {
     name,
     content,
     path,
     element: tab,
-    selection: null,
     fontSize: persistentFontSize,
     isFileSaved: true,
+    model: model,
+    viewState: null,
+    isMarkdown: false,
   };
   tabData.push(data);
 
@@ -1452,15 +1580,15 @@ async function attemptCloseTab(data) {
 
         const index = tabData.indexOf(data);
         tabs.removeChild(tab);
+        if (data.model) data.model.dispose();
         tabData = tabData.filter((t) => t !== data);
 
         if (tab.classList.contains("active")) {
           if (tabData.length) {
-            const newIndex = index > 0 ? index - 1 : 0;
+            const newIndex = index === tabData.length ? Math.max(index - 1, 0) : index;
             switchTab(tabData[newIndex]);
             setTimeout(() => monacoEditor?.focus(), 0);
           } else {
-            if (monacoEditor) monacoEditor.setValue("");
             currentTab = null;
             createTab();
 
@@ -1543,15 +1671,15 @@ async function attemptCloseTab(data) {
     if (data.path) addToRecentlyClosedFiles(data.path);
     const index = tabData.indexOf(data);
     tabs.removeChild(tab);
+    if (data.model) data.model.dispose();
     tabData = tabData.filter((t) => t !== data);
 
     if (tab.classList.contains("active")) {
       if (tabData.length) {
-        const newIndex = index > 0 ? index - 1 : 0;
+        const newIndex = index === tabData.length ? Math.max(index - 1, 0) : index;
         switchTab(tabData[newIndex]);
         setTimeout(() => monacoEditor?.focus(), 0);
       } else {
-        if (monacoEditor) monacoEditor.setValue("");
         currentTab = null;
         createTab();
 
@@ -1695,8 +1823,8 @@ function switchTab(data) {
   const currentActive = tabData.find((t) => t.element.classList.contains("active"));
   if (currentActive) {
     // save tab data
-    currentActive.content = monacoEditor.getValue();
-    currentActive.selection = monacoEditor.getSelection();
+    currentActive.content = currentActive.model.getValue();
+    currentActive.viewState = monacoEditor.saveViewState();
     currentActive.fontSize = fontSize;
     currentActive.wordWrap = isWordWrapOn;
   }
@@ -1705,9 +1833,9 @@ function switchTab(data) {
   monacoEditor.updateOptions({ fontSize });
   isWordWrapOn = data.wordWrap ?? true;
   isMarkdownOn = data.isMarkdown ?? false;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
-  const model = monacoEditor.getModel();
-  monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "monapad");
+  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+  monaco.editor.setModelLanguage(data.model, isMarkdownOn ? "markdown" : "monapad");
+  monacoEditor.updateOptions({ autoClosingBrackets: isMarkdownOn ? "always" : "never" });
 
   // update tab style
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -1723,7 +1851,8 @@ function switchTab(data) {
   }
 
   // update tab content
-  monacoEditor.setValue(data.content);
+  monacoEditor.setModel(data.model);
+  attachCtrlWheelListener();
 
   if (data.originalContent === undefined) {
     data.originalContent = data.content;
@@ -1732,28 +1861,25 @@ function switchTab(data) {
   currentTab = data;
   currentFilePath = data.path || data.name;
 
-  // restore selection
-  if (data.selection) {
-    setTimeout(() => {
-      monacoEditor.setSelection(data.selection);
-      monacoEditor.focus();
-    }, 0);
-  }
+  // restore selection, scroll position
+  if (data.viewState) monacoEditor.restoreViewState(data.viewState);
+  monacoEditor.focus();
 
   updateStatusBar();
 
   // restore WordWrap state
   isWordWrapOn = data.wordWrap ?? true;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
+  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
   const wrapBtn = document.querySelector('button[data-action="wordWrap"] svg.checkmark');
   if (wrapBtn) wrapBtn.style.display = isWordWrapOn ? "inline-block" : "none";
 
   // restore Markdown state
   isMarkdownOn = data.isMarkdown ?? false;
-  monaco.editor.setModelLanguage(monacoEditor.getModel(), isMarkdownOn ? "markdown" : "monapad");
-  if (isMarkdownOn) {
-    applyDecorations();
-  }
+  monaco.editor.setModelLanguage(data.model, isMarkdownOn ? "markdown" : "monapad");
+  monacoEditor.updateOptions({ autoClosingBrackets: isMarkdownOn ? "always" : "never" });
+
+  applyDecorations();
+
   const mdBtn = document.querySelector('button[data-action="toggleMarkdown"] svg.checkmark');
   if (mdBtn) mdBtn.style.display = isMarkdownOn ? "inline-block" : "none";
 
@@ -1827,10 +1953,11 @@ function applyFileContentToEditor(tab, content) {
   tab.isFileSaved = true;
 
   if (tab !== currentTab) switchTab(tab);
+  tab.viewState = monacoEditor.saveViewState();
+  tab.model.setValue(content);
 
-  const pos = monacoEditor.getPosition();
-  monacoEditor.setValue(content);
-  if (pos) monacoEditor.setPosition(pos);
+  monacoEditor.restoreViewState(tab.viewState);
+  monacoEditor.focus();
 
   const close = tab.element.querySelector(".close");
   if (close) close.classList.remove("show-unsaved");
@@ -1924,7 +2051,7 @@ async function loadFileByPath(filePath) {
       const close = singleTab.element.querySelector(".close");
       if (close) close.classList.remove("show-unsaved");
 
-      monacoEditor.setValue(content);
+      singleTab.model.setValue(content);
       switchTab(singleTab);
       updateRecentFiles(filePath);
       return;
@@ -2044,7 +2171,7 @@ async function populateRecentMenu() {
   recentMenu.appendChild(hr);
 
   const clearButton = document.createElement("button");
-  clearButton.textContent = i18next.t("menu.clearHistory");
+  clearButton.innerHTML = `<span>${i18next.t("menu.clearHistory")}</span>`;
   clearButton.className = "clear-recent-btn";
   clearButton.addEventListener("click", () => {
     localStorage.removeItem("recentFiles");
@@ -2253,7 +2380,7 @@ async function openTabInNewWindow(targetTabData) {
 
   const tabInfo = {
     name: targetTabData.name,
-    content: targetTabData.content,
+    content: targetTabData.model.getValue(),
     path: targetTabData.path,
     isFileSaved: targetTabData.isFileSaved,
     originalContent: targetTabData.originalContent,
@@ -2273,11 +2400,10 @@ async function openTabInNewWindow(targetTabData) {
 
   if (targetTabData.element.classList.contains("active")) {
     if (tabData.length) {
-      const newIndex = index > 0 ? index - 1 : 0;
+      const newIndex = index === tabData.length ? Math.max(index - 1, 0) : index;
       switchTab(tabData[newIndex]);
       setTimeout(() => monacoEditor?.focus(), 0);
     } else {
-      if (monacoEditor) monacoEditor.setValue("");
       currentTab = null;
       createTab();
 
@@ -2442,7 +2568,7 @@ customContextMenu.addEventListener("click", async (e) => {
     case "wordWrap":
       isWordWrapOn = !isWordWrapOn;
       if (currentTab) currentTab.wordWrap = isWordWrapOn;
-      monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "bounded" : "off" });
+      monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
       {
         const btn = e.target.closest('button[data-action="wordWrap"]');
         if (btn) {
@@ -2456,6 +2582,7 @@ customContextMenu.addEventListener("click", async (e) => {
       isMarkdownOn = currentLang !== "markdown";
       if (currentTab) currentTab.isMarkdown = isMarkdownOn;
       monaco.editor.setModelLanguage(model, isMarkdownOn ? "markdown" : "monapad");
+      monacoEditor.updateOptions({ autoClosingBrackets: isMarkdownOn ? "always" : "never" });
       applyDecorations();
       {
         const btn = e.target.closest('button[data-action="toggleMarkdown"]');
@@ -2477,7 +2604,7 @@ customContextMenu.addEventListener("mousedown", (e) => {
   e.preventDefault();
 });
 
-// font & layout menu display
+// settings menu display
 settingsButton.addEventListener("click", (e) => {
   e.stopPropagation();
   settingsMenu.style.display = "block";
@@ -2517,9 +2644,6 @@ window.addEventListener("keydown", async (e) => {
     e.preventDefault();
     createTab();
     switchTab(tabData.at(-1));
-    setTimeout(() => {
-      monacoEditor.focus();
-    }, 0);
   }
   // Ctrl + N
   if (e.ctrlKey && e.code === "KeyN") {

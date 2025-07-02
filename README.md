@@ -15,22 +15,23 @@ Monapad is a modern text editor designed for efficient editing and readability, 
 - A clean, modern dark theme-only interface for distraction-free writing.
 - Smooth and responsive tab management, just like Chromium browser experience.
 - Supports many of the same keyboard shortcuts and functionalities as VSCode.
-- Special syntax highlighting:
-  - Lines starting with `# ` and `## ` are highlighted.
-  - Lines starting with `-# ` are shown in gray.
+- Built-in language and syntax highlighting rules:
+  - Lines starting with `#`, `##`, and `###` are highlighted and can be folded by heading level.
+  - Lines starting with `-# ` are shown subtly.
   - Lines starting with `- `, `* `, `+ ` and `Num. ` have their marker highlighted.
   - Lines starting with `> ` are shown in _italic_.
-  - Text wrapped in single backticks `` `code` `` is highlighted as inline code.
-  - Text wrapped in triple backticks ``` is highlighted as a code block.
+  - Text wrapped in single backticks `` `text` `` is highlighted inline.
+  - Lines wrapped in triple backticks ``` is lightly highlighted as a code block.
 - Supports [Custome CSS and Themes](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md)
 - Syntax highlighting for Markdown.
 
-Standard text editors can become hard to read when handling large documents, as all text often appears in the same color. Monapad was created to solve this by offering lightweight highlight features without fully relying on Markdown formatting. It also allows users to use familiar VSCode-style shortcuts and editing features.
+Standard text editors can become hard to read and navigate when handling large documents. Monapad was created to solve this by offering lightweight highlighting features and heading level folding through its own language designed for text editing, without fully relying on Markdown formatting. It also allows users to use familiar VSCode-style shortcuts and editing features.
 
 The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting its purpose: a simple yet powerful editing experience. With support for text search and replace, multi-cursor editing, and essential editing operations, Monapad brings the familiarity of VSCode into a streamlined package.
 
+![Screenshot Onyx](screenshots/monapad_ss_onyx.png?raw=true "Onyx")
 ![Screenshot Dark](screenshots/monapad_ss_dark.png?raw=true "Dark")
-![Screenshot Ayu](customthemes/ayu/preview.png?raw=true "Ayu")
+![Screenshot Ash](screenshots/monapad_ss_ash.png?raw=true "Ash")
 
 ## Shortcuts:
 
@@ -41,6 +42,7 @@ The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting i
 - Ctrl+Num(1-9) to quickly switch to specified tab.
 - Ctrl+"+/-" or "mouse wheel" for zooming. Ctrl+"0" to reset zooming to default.
 - Ctrl+Click to open link.
+- Ctrl+/ to toggle subtext on current line.
 - F11 to toggle full screen.
 
 For more editor shortcuts, please refer to the sections **Basic editing**, **Search and replace**, and **Multi-cursor and selection** in [this link](https://code.visualstudio.com/shortcuts/keyboard-shortcuts-windows.pdf).

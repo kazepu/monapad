@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <title>Monapad</title>
     <style>
+      /* Figtree: UI en-US font */
+      /* (Yu Gothic UI: UI ja-JP font) */
       @font-face {
         font-family: "Figtree";
         src: url("./font/Figtree-Regular.ttf") format("truetype");
@@ -22,23 +24,79 @@
         font-weight: 700;
         font-style: normal;
       }
+      /* Iosevka: Editor Default en-US font */
+      @font-face {
+        font-family: "Iosevka";
+        src: url("./font/Iosevka-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Iosevka";
+        src: url("./font/Iosevka-Italic.ttf") format("truetype");
+        font-weight: 400;
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Iosevka";
+        src: url("./font/Iosevka-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Iosevka";
+        src: url("./font/Iosevka-BoldItalic.ttf") format("truetype");
+        font-weight: 700;
+        font-style: italic;
+      }
+      /* Migu 1M: Editor Default ja-JP font */
+      @font-face {
+        font-family: "Migu 1M";
+        src: url("./font/migu-1m-regular.ttf") format("truetype");
+        font-weight: 400;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Migu 1M";
+        src: url("./font/migu-1m-italic.ttf") format("truetype");
+        font-weight: 400;
+        font-style: italic;
+      }
+      @font-face {
+        font-family: "Migu 1M";
+        src: url("./font/migu-1m-bold.ttf") format("truetype");
+        font-weight: 700;
+        font-style: normal;
+      }
+      @font-face {
+        font-family: "Migu 1M";
+        src: url("./font/migu-1m-bold-italic.ttf") format("truetype");
+        font-weight: 700;
+        font-style: italic;
+      }
       :root {
-        --color1: #121214; /* editor, modal background */
-        --color2: #1a1a1e; /* toolbar, statusbar, menu, message background */
-        --color3: #242429; /* button hover, modal button */
-        --editorText: #ffffff; /* text color */
-        --btnHover: #666; /* modal button hover */
-        --highlight: #569cd6;
+        --color1: #000000; /* editor, modal background */
+        --color2: #0c0c0e; /* toolbar, statusbar, menu, message background */
+        --color3: #18181a; /* button hover, modal button */
+        --editorText: #b6b9bf; /* text color */
+        --grayOut: #565b66; /* grayed out text and element color */
+        --highlight: #569cd6; /* accent color, link color */
         --btnHighlight: #3074ac; /* modal highlight button */
         --windowClose: #e81123; /* window close */
         --warn: #cf5d6e; /* deleted file title */
+
+        /* You can specify one or more fonts to be used in the editor in order of priority */
+        /* If this field is not empty, the font setting in the app will be ignored */
+        /* Specify with the fallback font like: */
+        /* --editor-font: "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif; */
+        --editor-font: ;
 
         /* text, syntax highlight color */
         /* style: bold italic underline (set with space if multiple) */
         --heading1: var(--highlight); /* heading 1 */
         --heading1Style: ;
 
-        --heading2: #adcfeb; /* heading 2 */
+        --heading2: #a0bfd9; /* heading 2 */
         --heading2Style: ;
 
         --heading3: var(--editorText); /* heading 3 */
@@ -50,7 +108,7 @@
         --numberList: var(--highlight); /* bullet point */
         --numberListStyle: ;
 
-        --subText: #898989; /* sub text */
+        --subText: var(--grayOut); /* sub text */
         --subTextStyle: ;
 
         --blockQuote: var(--editorText); /* block quote */
@@ -59,10 +117,10 @@
         --inlineCode: var(--warn); /* inline code */
         --inlineCodeStyle: ;
 
-        --codeBlockFence: #898989; /* code block fence */
+        --codeBlockFence: #3b414d; /* code block fence */
         --codeBlockFenceStyle: ;
 
-        --codeBlock: var(--highlight); /* code block */
+        --codeBlock: #63829b; /* code block */
         --codeBlockStyle: ;
 
         /* monaco editor color */
@@ -70,6 +128,7 @@
         --vscode-editor-foreground: var(--editorText);
         --vscode-editor-lineHighlightBackground: var(--color2);
         --vscode-editor-lineHighlightBorder: #00000000;
+        --vscode-editor-wordHighlightBackground: #00000000;
         --vscode-editorWidget-background: var(--color2);
         --vscode-editorHoverWidget-background: var(--color2);
         --vscode-quickInputList-focusBackground: var(--color3);
@@ -83,6 +142,10 @@
         --vscode-badge-background: var(--color3);
         --vscode-editorWidget-border: var(--color3);
         --vscode-editorHoverWidget-border: var(--color3);
+        --vscode-editorGutter-foldingControlForeground: var(--grayOut);
+        --vscode-editorLineNumber-foreground: #565b6680;
+        --vscode-editorLineNumber-activeForeground: var(--grayOut);
+        --vscode-editor-selectionBackground: #569cd644;
       }
 
       body {
@@ -94,7 +157,12 @@
       }
 
       /* monaco editor style */
-      /* .monaco-editor .sub-text */
+      /* markdown bracket highlighting color */
+      .monaco-editor .bracket-highlighting-0,
+      .monaco-editor .bracket-highlighting-1,
+      .monaco-editor .bracket-highlighting-2 {
+        color: #ce9178 !important;
+      }
       .monaco-editor .marker-transparent {
         opacity: 0.25;
       }
@@ -103,17 +171,32 @@
       }
       .monaco-editor .line-numbers {
         font-family: "Consolas", "Courier New", monospace !important;
-        opacity: 0.5 !important;
       }
+      /* editor top shadow */
       .monaco-editor .scroll-decoration {
-        /* top shadow */
         display: none;
       }
+      /* go to line widget input focus border */
       :focus-visible {
         outline: var(--highlight) solid 1px;
         border-radius: 2px;
       }
+      /* remove right gap in go to line widget */
+      .monaco-action-bar.quick-input-inline-action-bar {
+        display: none !important;
+      }
+      .monaco-editor .margin-view-overlays .codicon-folding-manual-collapsed,
+      .monaco-editor .margin-view-overlays .codicon-folding-manual-expanded,
+      .monaco-editor .margin-view-overlays .codicon-folding-expanded,
+      .monaco-editor .margin-view-overlays .codicon-folding-collapsed {
+        transition: none !important;
+      }
 
+      line,
+      rect,
+      polyline {
+        stroke: var(--editorText) !important;
+      }
       button {
         font-family: inherit;
       }
@@ -128,8 +211,12 @@
         line-height: 28px;
       }
       .disabled {
-        opacity: 0.25;
+        color: var(--grayOut) !important;
         pointer-events: none;
+      }
+      .disabled line,
+      .disabled polyline {
+        stroke: var(--grayOut) !important;
       }
       #container {
         display: flex;
@@ -138,14 +225,17 @@
       }
       #toolbar {
         display: flex;
+        position: fixed;
         align-items: center;
-        background: var(--color2);
+        background: var(--color1);
+        width: 100%;
         height: 35px;
+        overflow: visible;
         -webkit-app-region: drag;
       }
       #menu-button {
         -webkit-app-region: no-drag;
-        background: var(--color2);
+        background: var(--color1);
         color: var(--editorText);
         border: none;
         font-size: 11px;
@@ -158,11 +248,31 @@
         width: 40px;
         height: 100%;
       }
+      /* add border top to left margin of #editor */
+      #menu-button::before {
+        content: "";
+        position: absolute;
+        top: 35px;
+        left: 0;
+        width: 20px;
+        height: 1px;
+        background-color: var(--color3);
+      }
+      #menu-button svg line {
+        stroke: var(--grayOut) !important;
+        stroke-width: 2px;
+      }
+      #menu-button svg {
+        overflow: visible;
+      }
       #menu-button:hover {
-        background: var(--color3);
+        background: var(--color1);
+      }
+      #menu-button:hover svg line {
+        stroke: var(--highlight) !important;
       }
       #menu {
-        position: absolute;
+        position: fixed;
         top: 40px;
         left: 0px;
         background: var(--color2);
@@ -172,7 +282,7 @@
         padding: 5px 0;
         max-height: calc(100vh - 80px);
         overflow-y: auto;
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        border: solid 1px var(--color3);
         user-select: none;
       }
       #menu button {
@@ -193,7 +303,7 @@
       #tab-context-menu .hr,
       #theme-menu .hr {
         height: 1px;
-        background: color-mix(in srgb, var(--editorText) 10%, transparent);
+        background: var(--color3);
         margin: 5px 10px;
         flex-shrink: 0;
       }
@@ -210,10 +320,6 @@
         display: inline-block;
         width: 57%;
       }
-      #menu button .shortcut {
-        color: var(--editorText);
-        opacity: 0.25;
-      }
       .scrollable::-webkit-scrollbar {
         width: 10px;
       }
@@ -221,7 +327,7 @@
         background: transparent;
       }
       .scrollable::-webkit-scrollbar-thumb {
-        background: color-mix(in srgb, var(--editorText) 10%, transparent);
+        background: var(--color3);
       }
       .scrollable::-webkit-scrollbar-button,
       .scrollable::-webkit-scrollbar-corner {
@@ -238,7 +344,7 @@
         min-width: 120px;
         max-width: min(300px, calc(100vw - 260px));
         padding: 5px 0;
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        border: solid 1px var(--color3);
         user-select: none;
         box-sizing: border-box;
         overflow-y: auto;
@@ -290,8 +396,8 @@
         display: none;
         z-index: 9998;
         padding: 5px 0;
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
-        max-width: calc(100vw - 260px - 5px - 2px);
+        border: solid 1px var(--color3);
+        max-width: calc(100vw - 260px - 5px);
         min-width: 120px;
         user-select: none;
         box-sizing: border-box;
@@ -320,6 +426,9 @@
       #recent-menu button:hover {
         background: var(--color3);
       }
+      .clear-recent-btn {
+        color: var(--warn) !important;
+      }
 
       #toggleStatusBar,
       #openRecent,
@@ -338,97 +447,195 @@
         flex-shrink: 1;
         flex-grow: 0;
         align-items: center;
+        overflow: visible;
       }
       #tabs {
         display: flex;
         flex-grow: 1;
         min-width: 0;
         height: 100%;
-        overflow-y: hidden;
-        overflow-x: auto;
+        overflow: visible;
         align-items: center;
         user-select: none;
         -webkit-app-region: no-drag;
       }
       #tabs::-webkit-scrollbar {
-        height: 3px;
+        width: 0px;
+        background: transparent;
+        /* height: 3px; */
       }
       #tabs::-webkit-scrollbar-track {
         background: transparent;
       }
-      #tabs::-webkit-scrollbar-thumb {
-        background: color-mix(in srgb, var(--editorText) 10%, transparent);
-      }
+      /* #tabs::-webkit-scrollbar-thumb {
+        background: var(--color3);
+      } */
       #tabs::-webkit-scrollbar-button,
       #tabs::-webkit-scrollbar-corner {
         display: none;
       }
+
+      /* #tab-container > #tabs(.dragging) > .tab(.active, .has-reload-button) */
       .tab {
         -webkit-app-region: no-drag;
         display: flex;
+        box-sizing: border-box;
         align-items: center;
         justify-content: space-between;
         flex: 1 1 0;
-        width: 200px;
-        min-width: 50px;
-        max-width: 200px;
-        height: 100%;
+        height: 34px;
+        width: 220px;
+        max-width: 220px;
+        min-width: 0;
         text-overflow: ellipsis;
         white-space: nowrap;
-        overflow: hidden;
-        background: var(--color2);
+        overflow: visible;
+        background: var(--color1);
         padding: 0 10px;
-        font-size: 14px;
+        font-size: 13px;
         position: relative;
-        color: color-mix(in srgb, var(--editorText) 50%, transparent);
         cursor: default;
+        color: var(--grayOut);
+        border-top: 1px solid #00000000;
+        border-right: 1px solid #00000000;
+        border-left: 1px solid #00000000;
       }
       .tab:not(.active):not(.prev-active)::before {
         content: "";
         position: absolute;
-        right: 0;
-        top: 20%;
-        height: 60%;
+        right: -1px;
+        top: 25%;
+        height: 50%;
         width: 1px;
-        background: color-mix(in srgb, var(--editorText) 25%, transparent);
+        background: var(--color3);
       }
       .tab:first-of-type:not(.active)::after {
         content: "";
         position: absolute;
-        left: 0;
-        top: 20%;
-        height: 60%;
+        left: -1px;
+        top: 25%;
+        height: 50%;
         width: 1px;
-        background: color-mix(in srgb, var(--editorText) 25%, transparent);
-      }
-      .tab.active {
-        background: var(--color1);
-        border-right: none;
-        color: color-mix(in srgb, var(--editorText) 100%, transparent);
-      }
-      .tab-dragging:not(.active) {
-        z-index: 1 !important;
-      }
-      .tab-dragging:not(.active):not(.tab-dragging) .close-svg {
-        opacity: 0;
-      }
-      .tab.active {
-        z-index: 2 !important;
+        background: var(--color3);
       }
       .tab:hover,
-      .dragging .tab.tab-dragging {
-        color: color-mix(in srgb, var(--editorText) 100%, transparent);
+      .tab:not(.active):hover {
+        color: var(--editorText);
       }
-      .dragging .tab:not(.active):not(.tab-dragging):hover {
-        color: color-mix(in srgb, var(--editorText) 50%, transparent) !important;
+      /* active tab */
+      .tab.active {
+        height: 36px;
+        background: var(--color1);
+        color: var(--editorText);
+        border-top: 1px solid var(--highlight);
+        border-right: 1px solid var(--color3);
+        border-left: 1px solid var(--color3);
+        z-index: 2 !important;
+      }
+      /* non active tab */
+      .tab:not(.active) {
+        z-index: 1 !important;
+        color: var(--grayOut);
+      }
+      /* non active tab while active tab is being dragged */
+      .dragging .tab:not(.active):hover {
+        color: var(--grayOut);
         cursor: default;
       }
-      .tab .reload-button {
+      /* tab with reload button */
+      .tab.has-reload-button {
+        padding-left: 5px;
+      }
+
+      /* close button: (.tab >) .close(.show-unsaved) > .close-svg, .unsaved-dot */
+      /* parent (.close) */
+      .tab .close {
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      /* child (.close-svg) */
+      .tab .close .close-svg {
+        display: none;
+        line-height: 0;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        margin-right: -5px;
+        border-radius: 5px;
+      }
+      .tab .close .close-svg:hover {
+        background: var(--color3);
+      }
+      .tab:hover .close .close-svg,
+      .tab.active .close .close-svg,
+      .tab:hover .close.show-unsaved .close-svg {
+        display: flex;
+      }
+      .tab .close.show-unsaved .close-svg {
+        display: none;
+      }
+      /* child (.unsaved-dot) */
+      .tab .close .unsaved-dot {
+        display: none;
+        width: 8px;
+        height: 8px;
+        background: var(--editorText);
+        border-radius: 50%;
+        margin: 2px;
+      }
+      .tab:not(.active) .close .unsaved-dot {
+        background: var(--grayOut);
+      }
+      .tab .close.show-unsaved .unsaved-dot {
+        display: block;
+      }
+      .tab:hover .close.show-unsaved .unsaved-dot {
+        display: none;
+      }
+
+      /* name span: (.tab >) .name > .reload-button */
+      .tab .name {
+        flex: 1 1 auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: flex;
+        text-decoration: none;
+        -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+        mask-image: linear-gradient(to right, black 80%, transparent 100%);
+        -webkit-mask-size: 100% 100%;
+        mask-size: 100% 100%;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        line-height: 20px;
+      }
+      .tab:hover .name,
+      .tab.active .name,
+      .tab .name:has(+ .show-unsaved) {
+        max-width: calc(100% - 17px);
+      }
+      /* warned name span */
+      .tab .name.warn,
+      .tab:hover .name.warn {
+        text-decoration: line-through;
+        color: var(--warn);
+        opacity: 1;
+      }
+      .tab:not(.active) .name.warn {
         opacity: 0.5;
-        min-width: 12px;
+      }
+      /* reload button */
+      .tab .reload-button {
+        opacity: 1;
+        min-width: 20px;
         height: 20px;
         padding: 0;
-        margin-right: 8px;
+        margin-right: 5px;
+        border-radius: 5px;
         background: none;
         border: none;
         text-align: left;
@@ -438,114 +645,40 @@
         justify-content: center;
       }
       .tab .reload-button:hover {
+        background: var(--color3);
+      }
+      .tab:not(.active) .reload-button {
+        opacity: 0.5;
+      }
+      .tab:not(.active):hover .reload-button {
         opacity: 1;
-      }
-      .tab.has-reload-button .name {
-        line-height: 20px;
-      }
-      .tab .reload-button svg path {
-        stroke-width: 2px;
-        /* stroke: var(--highlight); */
       }
       .tab .reload-button svg {
         width: 12px;
         height: 12px;
         overflow: visible;
       }
-
-      .tab .close {
-        opacity: 0;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      .tab .reload-button svg path {
+        stroke-width: 2px;
+        stroke: var(--highlight);
       }
 
-      .tab:hover .close,
-      .tab.tab-dragging .close {
-        opacity: 1;
-      }
-
-      .tab.active .close {
-        opacity: 1;
-      }
-
-      .tab .close.show-unsaved {
-        opacity: 1;
-      }
-
-      .tab .close .close-svg {
-        display: none;
-        line-height: 0;
-        height: 15px;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .tab:hover .close .close-svg,
-      .tab.tab-dragging .close .close-svg {
-        display: flex;
-      }
-
-      .tab.active .close .close-svg {
-        display: flex;
-      }
-
-      .tab .close .unsaved-dot {
-        display: none;
-        width: 6px;
-        height: 6px;
-        background: white;
-        border-radius: 50%;
-        opacity: 0.5;
-        margin: 2px;
-      }
-
-      .tab .close.show-unsaved .unsaved-dot {
-        display: block;
-      }
-
-      .tab .close.show-unsaved .close-svg {
-        display: none;
-      }
-
-      .tab:hover .close.show-unsaved .close-svg {
-        display: flex;
-      }
-
-      .tab:hover .close.show-unsaved .unsaved-dot {
-        display: none;
-      }
-
-      .tab span.name {
-        flex: 1 1 auto;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: flex;
-        max-width: calc(100% - 15px);
-        text-decoration: none;
-      }
-      .tab span.name.warn {
-        text-decoration: line-through;
-        color: var(--warn);
-      }
       #add-tab {
         display: flex;
         flex-shrink: 0;
         -webkit-app-region: no-drag;
-        background: var(--color2);
+        background: var(--color1);
         color: var(--editorText);
         border: none;
         font-size: 18px;
         cursor: pointer;
-        /* order: 9999; */
         align-items: center;
         justify-content: center;
-        width: 40px;
-        min-width: 40px;
-        height: 100%;
+        width: 26px;
+        min-width: 26px;
+        height: 26px;
+        margin: 0 5px;
+        border-radius: 5px;
       }
       #add-tab:hover {
         background: var(--color3);
@@ -566,7 +699,7 @@
       .window-button {
         width: 40px;
         height: 100%;
-        background: var(--color2);
+        background: var(--color1);
         border: none;
         display: flex;
         align-items: center;
@@ -586,6 +719,9 @@
       #close-button:hover {
         background: var(--windowClose);
       }
+      #close-button:hover line {
+        stroke: #fff !important;
+      }
 
       button:focus,
       .tab:focus,
@@ -599,6 +735,8 @@
         color: var(--editorText);
         border: none;
         resize: none;
+        margin-top: 35px;
+        border-top: 1px solid var(--color3);
       }
       #status-bar {
         height: 25px;
@@ -609,9 +747,10 @@
         align-items: center;
         padding: 0 10px;
         box-sizing: border-box;
-        color: color-mix(in srgb, var(--editorText) 50%, transparent);
+        color: var(--grayOut);
         user-select: none;
         min-width: 0;
+        border-top: 1px solid var(--color3);
       }
       #status-left {
         line-height: 25px;
@@ -621,14 +760,16 @@
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
+        margin-top: -1px;
       }
       #status-right {
         line-height: 25px;
         display: flex;
         flex-shrink: 0;
+        margin-top: -1px;
       }
       #status-right span {
-        margin-left: 30px;
+        margin-left: 20px;
         white-space: nowrap;
       }
       #zoom-level {
@@ -645,7 +786,7 @@
         color: var(--editorText);
         padding: 10px 20px;
         font-size: 14px;
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        border: solid 1px var(--color3);
         z-index: 9997;
         opacity: 0;
         pointer-events: none;
@@ -677,14 +818,17 @@
       #file-drop {
         pointer-events: none;
         display: none;
-        border: dashed 2px color-mix(in srgb, var(--editorText) 50%, transparent);
-        border-radius: 7.5px;
         width: 300px;
         height: 200px;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         text-align: center;
+        background: var(--highlight);
+        color: color-mix(in srgb, black 70%, var(--highlight) 30%);
+        outline: 2px dashed color-mix(in srgb, white 40%, var(--highlight) 40%);
+        outline-offset: -12.5px;
+        border-radius: 17px;
       }
       #file-drop img {
         width: 100px;
@@ -692,6 +836,7 @@
       #file-drop p {
         margin: 10px 0;
         font-size: 16px;
+        font-weight: 500;
       }
       #confirm-save,
       #confirm-save-window {
@@ -707,7 +852,7 @@
         flex-direction: column;
         justify-content: space-between;
         align-items: center;
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        border: solid 1px var(--color3);
       }
 
       #confirm-save p,
@@ -754,13 +899,13 @@
       }
       #confirm-save-window .confirm-buttons #confirm-save-all:hover,
       #confirm-save .confirm-buttons #confirm-save-yes:hover {
-        background: var(--highlight);
+        background: color-mix(in srgb, black 10%, var(--btnHighlight) 90%);
       }
 
       #confirm-save .confirm-buttons button:hover,
       #confirm-save-window .confirm-buttons button:hover,
       #about button:hover {
-        background: var(--btnHover);
+        background: color-mix(in srgb, white 10%, var(--color3) 90%);
       }
 
       #about {
@@ -768,9 +913,9 @@
         flex-direction: column;
         padding: 20px;
         background: var(--color1);
-        max-width: min(calc(100vw - 60px), 360px);
-        max-height: calc(100vh - 60px);
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        max-width: min(calc(100vw - 100px), 360px);
+        max-height: calc(100vh - 100px);
+        border: solid 1px var(--color3);
         font-size: 14px;
       }
       #about-main {
@@ -799,7 +944,7 @@
       }
       #disclaimer {
         display: inline-block;
-        color: var(--btnHover);
+        color: var(--grayOut);
         font-size: 12px;
         line-height: 1;
       }
@@ -818,7 +963,7 @@
         max-height: calc(100vh - 12.5px - 35px);
         position: absolute;
         background: var(--color2);
-        border: solid 1px color-mix(in srgb, var(--editorText) 10%, transparent);
+        border: solid 1px var(--color3);
         padding: 5px 0;
         z-index: 9999;
         display: none;
@@ -852,10 +997,10 @@
       #tab-context-menu button[data-action="openInNewWindow"] .label {
         width: 100%;
       }
+      #menu button .shortcut,
       #custom-context-menu button .shortcut,
       #tab-context-menu button .shortcut {
-        color: var(--editorText);
-        opacity: 0.25;
+        color: var(--grayOut);
       }
       #custom-context-menu button svg {
         display: inline-block;
@@ -874,17 +1019,19 @@
         box-sizing: border-box;
         display: none;
         overflow-y: auto;
+        border-top: 1px solid var(--color3);
+        border-left: 1px solid var(--color3);
       }
       #settings-menu h1 {
         font-size: 14px;
         font-weight: 500;
-        opacity: 0.5;
+        color: var(--grayOut);
         margin: 0 0 10px 0;
         padding: 0 20px;
       }
       #settings-menu .hr {
         height: 1px;
-        background: color-mix(in srgb, var(--editorText) 10%, transparent);
+        background: var(--color3);
         margin: 0px 20px 5px 20px;
         flex-shrink: 0;
       }
@@ -943,6 +1090,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 5px;
+        margin: 0;
       }
       .size-change-btn:hover {
         background: var(--color3);
@@ -979,12 +1128,12 @@
         right: 0px;
         width: 14px;
         height: 7px;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23fff" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9.77 5.65"><polyline fill="none" stroke="%23b6b9bf" stroke-miterlimit="10" points=".35 .35 4.94 4.94 9.41 .35"/></svg>')
           no-repeat center;
         background-size: contain;
       }
       .settings-info {
-        color: var(--btnHover);
+        color: var(--grayOut);
         font-size: 12px;
         padding: 0 20px;
         margin: 0;
@@ -1116,7 +1265,7 @@
           <span class="shortcut">Ctrl + H</span>
         </button>
         <div class="hr"></div>
-        <button id="print-button">Print</button>
+        <!-- <button id="print-button">Print</button> -->
         <button id="changeTheme">
           <span class="btn-text">Theme</span>
           <svg
@@ -1276,14 +1425,14 @@
           <span class="label">Close</span>
           <span class="shortcut">Ctrl + W</span>
         </button>
+        <button data-action="closeSaved">
+          <span class="label">Close Saved</span>
+        </button>
         <button data-action="closeOthers">
           <span class="label">Close Others</span>
         </button>
         <button data-action="closeToRight">
           <span class="label">Close to the Right</span>
-        </button>
-        <button data-action="closeSaved">
-          <span class="label">Close Saved</span>
         </button>
         <div class="hr"></div>
         <button data-action="copyPath">
@@ -1356,7 +1505,7 @@
         </div>
 
         <p id="fontDescription" class="settings-info">
-          Word wrap may misalign with proportional fonts. Try a monospaced font like Consolas if needed.
+          Word wrap may misalign with proportional fonts. Use a monospaced font if needed.
         </p>
 
         <!-- Editor Layout -->
@@ -1406,6 +1555,20 @@
         </button>
         <button id="toggleSyntaxHighlight">
           <span>Syntax highlight</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="toggleFolding">
+          <span>Folding</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"

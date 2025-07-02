@@ -30,59 +30,43 @@ If approved, all users will be able to download and use it from the repository.
 
 ## Creating Your Own Theme
 
-You can either edit the official custom themes, or open the developer tools with `Shift + Ctrl + I` and inspect elements as you create your own theme.  
-Make sure to include at least the following variables:
-
-```css
-:root {
-  --color1: #121214 !important; /* (dark theme) editor, modal background */
-  --color2: #1a1a1e !important; /* (dark theme) toolbar, statusbar, menu, message background */
-  --color3: #242429 !important; /* (dark theme) button hover, modal button */
-  --editorText: #ffffff; /* text color */
-
-  /* monaco editor color */
-  /* 6 and 8 digit hex are allowed */
-  --vscode-editor-background: var(--color1);
-  --vscode-editor-foreground: var(--editorText);
-  --vscode-editor-lineHighlightBackground: var(--color2);
-  --vscode-editor-lineHighlightBorder: #00000000;
-  --vscode-editorWidget-background: var(--color2);
-  --vscode-editorHoverWidget-background: var(--color2);
-  --vscode-quickInputList-focusBackground: var(--color3);
-  --vscode-input-background: var(--color1);
-  --vscode-list-activeSelectionBackground: var(--color3);
-  --vscode-list-dropBackground: var(--color3);
-  --vscode-menu-selectionBackground: var(--color3);
-  --vscode-list-hoverBackground: var(--color3);
-  --vscode-editorStickyScrollHover-background: var(--color3);
-  --vscode-button-hoverBackground: var(--color3);
-  --vscode-badge-background: var(--color3);
-  --vscode-editorWidget-border: var(--color3);
-  --vscode-editorHoverWidget-border: var(--color3);
-}
-```
+You can either edit the official custom themes, or open the developer tools with `Shift + Ctrl + I` and inspect elements as you create your own theme.
 
 Changing color can be done simply by redefining the default variables.  
-You can refer to [this official theme](https://github.com/sheetau/monapad/tree/main/customthemes/ayu/Ayu.css) to see more in-depth how it's done.  
-Below are all the default variables available for customization (redefine and use them within the `:root` selector):
+Below are all the default variables available for customization (redefine and use them within the `:root` selector).  
+You can also refer to [this official theme](https://github.com/sheetau/monapad/tree/main/customthemes/ayu/Ayu.css) to see more in-depth how it's done.
 
-### Monapad Theme Color Variables
+### Monapad Theme Customization Variables
 
 #### Default Theme Color Variables
 
 These are only used in CSS, so if you want more precise control, you can directly set colors on the elements themselves.
 
-| Variable         | Description                                                                  |
-| ---------------- | ---------------------------------------------------------------------------- |
-| `--color1`       | Background of editor and modal (`!important` required)                       |
-| `--color2`       | Background of toolbar, statusbar, menu, and messages (`!important` required) |
-| `--color3`       | Hover color for buttons and modal buttons (`!important` required)            |
-| `--editorText`   | Primary text color                                                           |
-| `--btnHover`     | Button hover color in modals                                                 |
-| `--highlight`    | Highlight color used across UI                                               |
-| `--btnHighlight` | Highlight color for important buttons                                        |
-| `--windowClose`  | Close button color                                                           |
-| `--warn`         | Title color for deleted files                                                |
+| Variable         | Description                                                             |
+| ---------------- | ----------------------------------------------------------------------- |
+| `--color1`       | Background of toolbar, editor and modal (`!important` required)         |
+| `--color2`       | Background of statusbar, menu, and messages (`!important` required)     |
+| `--color3`       | Background of hovered buttons and modal buttons (`!important` required) |
+| `--editorText`   | Primary text color                                                      |
+| `--grayOut`      | Grayed out text and element colors                                      |
+| `--highlight`    | Accent color                                                            |
+| `--btnHighlight` | Background of highlighted buttons                                       |
+| `--windowClose`  | Window Close button color                                               |
+| `--warn`         | Text color for deleted files                                            |
+
+#### Editor Font Override
+
+You can also override the font used in the editor by setting the `--editor-font` variable.
+
+If this variable is defined, it will take precedence over the in-app font settings.  
+You can specify one or more fonts in order of priority. Fonts imported via `@import` are also supported.  
+Make sure to always include a fallback font to ensure compatibility across environments.
+
+Example:
+
+```css
+--editor-font: "Yu Gothic UI", "Meiryo", "Hiragino Sans", sans-serif;
+```
 
 #### Monapad Syntax Highlighting
 
@@ -102,14 +86,16 @@ Use hex colors (6 digits), or variables that contain them.
 | `--codeBlock`      | Color for the actual code in blocks |
 
 You can specify font styles by adding a `Style` to each variable name.  
-Supported styles are `bold`, `italic`, and `underline`.  
-Use spaces to combine multiple styles like:
+Supported styles are `bold`, `italic`, and `underline`. Use spaces to combine multiple styles.
+
+Example:
 
 ```css
+--heading1: var(--highlight);
 --heading1Style: bold italic underline;
 ```
 
-Also, the `.marker-transparent` class is used to adjust the opacity of some syntax markers, and the `.sub-text` class is used to adjust the opacity of full line of subtext.
+Also, the `.marker-transparent` class is used to adjust the opacity of some syntax markers.
 
 ### Monaco Editor Theme Color Variables
 
@@ -131,4 +117,9 @@ These specify the syntax highlight colors used when Markdown mode is enabled.
 Refer to:  
 https://github.com/trofimander/monaco-markdown/blob/master/src/ts/markdown.ts
 
-For example, use `--md-string-link` to theme the `string.link` token.
+For example, use `--md-string-link` to theme the `string.link` token, like:
+
+```css
+--md-keyword: #aad94c;
+--md-string-link: #39bae6;
+```
