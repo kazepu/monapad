@@ -1,4 +1,7 @@
 import * as monaco from "monaco-editor";
+import Choices from "choices.js";
+import "choices.js/public/assets/styles/choices.min.css";
+import "./custom-choices.css";
 import i18next from "i18next";
 
 const tabsContainer = document.getElementById("tabs-container");
@@ -13,12 +16,18 @@ const openRecentBtn = document.getElementById("openRecent");
 const recentMenu = document.getElementById("recent-menu");
 const newWindowBtn = document.getElementById("newWindowBtn");
 const newTabBtn = document.getElementById("newTabBtn");
-const fontFamilySelect = document.getElementById("font-family-select");
 const settingsButton = document.getElementById("settingsBtn");
 const settingsMenu = document.getElementById("settings-menu");
 const customContextMenu = document.getElementById("custom-context-menu");
 const tabContextMenu = document.getElementById("tab-context-menu");
 const excludedIds = ["changeTheme", "openRecent"]; // buttons that dont close menu on click
+
+// font family select, dropdown menu
+const fontSelectRow = document.querySelector(".font-select-row");
+const fontFamilySelect = document.getElementById("font-family-select");
+let lastScrollTop = settingsMenu.scrollTop;
+let scrollLocked = false; // focusin procss ongoing or not
+let scrollAdjustQueue = []; // what scroll adjusting process to run after preventing focus() auto scroll
 
 // font size
 let wheelListener = null;
@@ -66,7 +75,6 @@ let zoomLevel = 1;
 let currentTab = { content: "", selection: null, fontSize: persistentFontSize };
 let tabData = [];
 let recentlyClosedFiles = [];
-let statusBarVisible = localStorage.getItem("statusBarVisible") !== "false";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentFilePath = `${i18next.t("file.untitled")}.txt`;
 const defaultSettings = {
@@ -74,7 +82,8 @@ const defaultSettings = {
   lineNumbers: false,
   minimap: true,
   syntaxHighlight: true,
-  folding: false,
+  folding: true,
+  statusBarVisible: true,
 };
 const settings = JSON.parse(localStorage.getItem("editorSettings")) || defaultSettings;
 let selectedFontFamily = localStorage.getItem("selectedFontFamily") || "Iosevka";
@@ -104,8 +113,11 @@ let currentWatcher = null;
 let currentWatchedCssFile = null;
 
 // app version
-window.electronAPI.getAppVersion().then((version) => {
-  document.querySelector("#version-text").textContent = `v${version}`;
+window.electronAPI.getAppVersion().then((versions) => {
+  document.querySelector("#version-text").textContent = `v${versions.app}`;
+  document.querySelector(
+    "#version-detail-text"
+  ).innerHTML = `Electron: ${versions.electron}<br>Chromium: ${versions.chrome}<br>Node.js: ${versions.node}<br>V8: ${versions.v8}`;
 });
 
 // file open on launch
@@ -153,11 +165,19 @@ window.electronAPI.onLoadTabData((receivedTabData) => {
   switchTab(newTabData);
 });
 
+// language
 const langSwitcher = document.getElementById("langSwitcher");
 const savedLang = localStorage.getItem("lang") || "en";
 langSwitcher.value = savedLang;
 
-// language
+const langChoices = new Choices(langSwitcher, {
+  searchEnabled: false,
+  itemSelectText: "",
+  position: "bottom",
+});
+
+langChoices.setChoiceByValue(savedLang);
+
 i18next
   .init({
     lng: savedLang,
@@ -183,10 +203,12 @@ function updateMenuLabels() {
   document.querySelector("#saveAsFileBtn .label").textContent = i18next.t("menu.saveAs");
   document.querySelector("#triggerFindBtn .label").textContent = i18next.t("menu.find");
   document.querySelector("#triggerReplaceBtn .label").textContent = i18next.t("menu.replace");
+  document.querySelector("#triggerGoToLineBtn .label").textContent = i18next.t("menu.goToLine");
+  document.querySelector("#triggerGoToSymbolBtn .label").textContent = i18next.t("menu.goToSymbol");
+  document.querySelector("#triggerShowCommandsBtn .label").textContent = i18next.t("menu.showCommands");
   // document.getElementById("print-button").textContent = i18next.t("menu.print");
   document.querySelector("#changeTheme .btn-text").textContent = i18next.t("menu.theme");
-  document.querySelector("#toggleStatusBar .btn-text").textContent = i18next.t("menu.statusBar");
-  document.getElementById("settingsBtn").textContent = i18next.t("menu.settings");
+  document.querySelector("#settingsBtn .label").textContent = i18next.t("menu.settings");
   document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
   document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
   document.getElementById("aboutBtn").textContent = i18next.t("menu.about");
@@ -218,14 +240,17 @@ function updateMenuLabels() {
   document.querySelector('button[data-action="closeSaved"] .label').textContent = i18next.t("tabMenu.closeSaved");
   document.querySelector('button[data-action="copyPath"] .label').textContent = i18next.t("tabMenu.copyPath");
   document.querySelector('button[data-action="openPath"] .label').textContent = i18next.t("tabMenu.openPath");
+  document.querySelector('button[data-action="reopenClosedTab"] .label').textContent =
+    i18next.t("tabMenu.reopenClosedTab");
   document.querySelector('button[data-action="openInNewWindow"] .label').textContent =
     i18next.t("tabMenu.openInNewWindow");
 
   // settings
-  document.querySelector("#settings-menu .font").textContent = i18next.t("settings.font");
+  document.querySelector("#settings-menu .font .h1").textContent = i18next.t("settings.font");
   document.querySelector("#settings-menu .size").textContent = i18next.t("settings.size");
   document.getElementById("fontDescription").innerHTML = i18next.t("settings.fontDescription");
-  document.getElementById("settingsLayout").textContent = i18next.t("settings.layout");
+  document.querySelector("#settingsLayout .h1").textContent = i18next.t("settings.layout");
+  document.querySelector("#toggleStatusBar span").textContent = i18next.t("settings.statusBar");
   document.querySelector("#line-highlight span").textContent = i18next.t("settings.highlightLine");
   document.querySelector("#line-num span").textContent = i18next.t("settings.lineNumbers");
   document.querySelector("#minimap span").textContent = i18next.t("settings.displayMinimap");
@@ -237,6 +262,8 @@ function updateMenuLabels() {
   document.getElementById("settingsCustomTheme").textContent = i18next.t("settings.customTheme");
   document.getElementById("openThemeFolder").textContent = i18next.t("settings.openThemeFolder");
   document.getElementById("customThemeDescription").innerHTML = i18next.t("settings.customThemeDescription");
+  document.querySelector(".font .reset").title = i18next.t("settings.resetTooltip");
+  document.querySelector("#settingsLayout .reset").title = i18next.t("settings.resetTooltip");
 
   // modal
   document.querySelector("#file-drop p").textContent = i18next.t("modal.fileDrop");
@@ -247,14 +274,14 @@ function updateMenuLabels() {
   document.getElementById("confirm-save-all").textContent = i18next.t("modal.saveAll");
   document.getElementById("confirm-discard-all").textContent = i18next.t("modal.discardAll");
   document.getElementById("confirm-cancel-all").textContent = i18next.t("modal.cancel");
-  document.getElementById("description").textContent = i18next.t("modal.description");
+  // document.getElementById("description").textContent = i18next.t("modal.description");
   document.getElementById("discordServer").textContent = i18next.t("modal.discordServer");
   document.getElementById("creator").textContent = i18next.t("modal.creator");
   document.getElementById("disclaimer-title").textContent = i18next.t("modal.disclaimer");
 }
 
-langSwitcher.addEventListener("change", (e) => {
-  const newLang = e.target.value;
+langSwitcher.addEventListener("change", () => {
+  const newLang = langChoices.getValue(true);
 
   i18next.changeLanguage(newLang).then(() => {
     updateMenuLabels();
@@ -367,11 +394,84 @@ monaco.languages.setMonarchTokensProvider("monapad", {
   },
 });
 
+// symbol
+monaco.languages.registerDocumentSymbolProvider("monapad", {
+  provideDocumentSymbols(model, token) {
+    const lines = model.getLinesContent();
+    const symbols = [];
+
+    lines.forEach((line, lineNumber) => {
+      const trimmed = line.trim();
+
+      let match, name, headingPrefix, kind;
+
+      if ((match = trimmed.match(/^###\s+(.*)/))) {
+        headingPrefix = "### ";
+        kind = monaco.languages.SymbolKind.Method; // Level 3
+      } else if ((match = trimmed.match(/^##\s+(.*)/))) {
+        headingPrefix = "## ";
+        kind = monaco.languages.SymbolKind.Function; // Level 2
+      } else if ((match = trimmed.match(/^#\s+(.*)/))) {
+        headingPrefix = "# ";
+        kind = monaco.languages.SymbolKind.Class; // Level 1
+      }
+
+      if (headingPrefix) {
+        name = headingPrefix + match[1];
+        const lineNum = lineNumber + 1;
+        const fullRange = new monaco.Range(lineNum, 1, lineNum, line.length + 1);
+
+        const startCol = line.indexOf(match[1]) + 1;
+        const selectRange = new monaco.Range(lineNum, startCol, lineNum, startCol + match[1].length);
+
+        symbols.push({
+          name,
+          kind,
+          range: fullRange,
+          selectionRange: selectRange,
+        });
+      }
+    });
+
+    return symbols;
+  },
+});
+
+// folding
 monaco.languages.registerFoldingRangeProvider("monapad", {
   provideFoldingRanges(model, context, token) {
     const ranges = [];
     const lines = model.getLineCount();
 
+    // code block
+    const codeBlocks = [];
+    let codeBlockStart = null;
+
+    for (let lineNumber = 1; lineNumber <= lines; lineNumber++) {
+      const line = model.getLineContent(lineNumber).trim();
+
+      if (line.startsWith("```")) {
+        if (codeBlockStart === null) {
+          codeBlockStart = lineNumber;
+        } else {
+          const codeBlockEnd = lineNumber;
+          codeBlocks.push({ start: codeBlockStart, end: codeBlockEnd });
+          ranges.push({
+            start: codeBlockStart,
+            end: codeBlockEnd,
+            kind: monaco.languages.FoldingRangeKind.Region,
+          });
+          codeBlockStart = null;
+        }
+      }
+    }
+
+    // check if heading is inside code block
+    function isInsideCodeBlock(lineNumber) {
+      return codeBlocks.some((block) => lineNumber >= block.start && lineNumber <= block.end);
+    }
+
+    // heading
     const headingRegexes = [
       { level: 1, regex: /^\s*#\s[^#]/ },
       { level: 2, regex: /^\s*##\s[^#]/ },
@@ -381,6 +481,8 @@ monaco.languages.registerFoldingRangeProvider("monapad", {
     const headings = [];
 
     for (let lineNumber = 1; lineNumber <= lines; lineNumber++) {
+      if (isInsideCodeBlock(lineNumber)) continue;
+
       const line = model.getLineContent(lineNumber);
       for (const { level, regex } of headingRegexes) {
         if (regex.test(line)) {
@@ -516,6 +618,7 @@ monacoEditor = monaco.editor.create(editor, {
   cursorSmoothCaretAnimation: false,
 });
 
+// subtext shortcut
 monacoEditor.addAction({
   id: "toggle-subtext",
   label: "Toggle Subtext",
@@ -561,6 +664,65 @@ monacoEditor.addAction({
   },
 });
 
+// heading shortcut
+function createToggleHeadingAction(level) {
+  const id = `toggle-h${level}`;
+  const label = `Toggle Heading ${level}`;
+  const keyCode = monaco.KeyCode.Digit1 + (level - 1);
+  const prefix = "#".repeat(level) + " ";
+
+  return {
+    id,
+    label,
+    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | keyCode],
+    precondition: null,
+    keybindingContext: null,
+    run: function (ed) {
+      const model = ed.getModel();
+      const selections = ed.getSelections();
+
+      ed.pushUndoStop();
+      ed.executeEdits(
+        id,
+        selections
+          .map((selection) => {
+            const startLine = selection.startLineNumber;
+            const endLine = selection.endLineNumber;
+            const edits = [];
+
+            for (let line = startLine; line <= endLine; line++) {
+              const lineContent = model.getLineContent(line);
+              const trimmed = lineContent.trimStart();
+              const leadingSpaces = lineContent.slice(0, lineContent.length - trimmed.length);
+
+              const isCurrentHeading = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`).test(trimmed);
+
+              let newText;
+              if (isCurrentHeading) {
+                newText = trimmed.replace(new RegExp(`^${prefix}`), "");
+              } else {
+                newText = trimmed.replace(/^#{1,6}\s*/, "");
+                newText = prefix + newText;
+              }
+
+              edits.push({
+                range: new monaco.Range(line, 1, line, lineContent.length + 1),
+                text: leadingSpaces + newText,
+              });
+            }
+
+            return edits;
+          })
+          .flat()
+      );
+      ed.pushUndoStop();
+    },
+  };
+}
+monacoEditor.addAction(createToggleHeadingAction(1)); // Ctrl+Shift+1
+monacoEditor.addAction(createToggleHeadingAction(2)); // Ctrl+Shift+2
+monacoEditor.addAction(createToggleHeadingAction(3)); // Ctrl+Shift+3
+
 let currentDecorations = [];
 
 function applyDecorations() {
@@ -581,10 +743,20 @@ function applyDecorations() {
     return;
   }
 
+  // コードブロック内かどうか判定するための状態
+  let insideCodeBlock = false;
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trimStart();
     const leadingSpaces = line.length - trimmed.length;
+
+    if (trimmed.startsWith("```")) {
+      insideCodeBlock = !insideCodeBlock;
+      continue; // ``` 行にはデコレーション適用しない
+    }
+
+    if (insideCodeBlock) continue;
 
     const matchers = [
       { regex: /^#\s[^#]/, className: "heading-1" }, // heading 1
@@ -601,16 +773,16 @@ function applyDecorations() {
         const startColumn = leadingSpaces + 1;
         const endColumn = startColumn + markerLength - 1;
 
-        // always apply marker-transparent to leading marker
         decorations.push({
           range: new monaco.Range(i + 1, startColumn, i + 1, endColumn),
           options: { inlineClassName: "marker-transparent" },
         });
 
-        break; // first match only
+        break;
       }
     }
   }
+
   currentDecorations = monacoEditor.deltaDecorations(currentDecorations, decorations);
 }
 
@@ -646,6 +818,167 @@ monacoEditor.onDidChangeModelContent(() => {
 });
 applyDecorations();
 
+// prevent monaco error that occurs when try to delete all selection includes folding
+monacoEditor.onKeyDown((e) => {
+  const code = e.browserEvent.code;
+  if (code !== "Delete" && code !== "Backspace") return;
+
+  const model = monacoEditor.getModel();
+  const sel = monacoEditor.getSelection();
+  const full = model.getFullModelRange();
+
+  const isFull =
+    sel.startLineNumber === full.startLineNumber &&
+    sel.startColumn === full.startColumn &&
+    sel.endLineNumber === full.endLineNumber &&
+    sel.endColumn === full.endColumn;
+
+  if (!isFull) return;
+
+  // check if folding exists
+  const foldingController = monacoEditor.getContribution("editor.contrib.folding");
+  foldingController?.foldingModelPromise.then((fm) => {
+    if (!fm) return;
+    const hasCollapsed = Array.from({ length: fm.regions.length }).some((_, i) => fm.regions.isCollapsed(i));
+    if (hasCollapsed) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const act = monacoEditor.getAction("editor.unfoldAll");
+      if (act) {
+        act.run().then(() => {
+          const selection = monacoEditor.getSelection();
+          if (selection && !selection.isEmpty()) {
+            monacoEditor.executeEdits("deleteAfterUnfold", [
+              {
+                range: selection,
+                text: "", // delete
+              },
+            ]);
+          }
+        });
+      }
+    }
+  });
+});
+
+// font choices
+const fontChoices = new Choices(fontFamilySelect, {
+  searchEnabled: true,
+  itemSelectText: "",
+  shouldSort: false,
+  allowHTML: true,
+  position: "bottom",
+});
+
+// do not close menu when input box is clicked
+fontChoices.input.element.addEventListener("mousedown", (e) => {
+  e.stopPropagation();
+});
+fontChoices.input.element.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
+// scroll to bottom of settings menu whenever langSwitcher dropdown is shown
+function scrollToBottomOfSettingsMenu() {
+  requestAnimationFrame(() => {
+    settingsMenu.scrollTop = settingsMenu.scrollHeight;
+    requestAnimationFrame(() => {
+      settingsMenu.scrollTop = settingsMenu.scrollHeight;
+    });
+  });
+}
+
+// scroll to selected item on top of menu list
+function scrollToSelectedOption(choicesInstance) {
+  const container = choicesInstance.containerOuter.element;
+  container.querySelectorAll(".choices__item.is-highlighted").forEach((el) => el.classList.remove("is-highlighted"));
+
+  const selectedOption = container.querySelector(".choices__item.is-selected");
+  if (selectedOption) {
+    selectedOption.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+    requestAnimationFrame(() => {
+      selectedOption.classList.add("is-highlighted");
+    });
+  }
+}
+
+// scroll fontFamilySelect to top of settingsMenu when its dropdown is not fully inside it
+function adjustDropdownScroll() {
+  requestAnimationFrame(() => {
+    const dropdown = document.querySelector(".font-select-row .choices__list--dropdown");
+    if (!dropdown || !fontSelectRow) return;
+
+    const settingsRect = settingsMenu.getBoundingClientRect();
+    const dropdownRect = dropdown.getBoundingClientRect();
+
+    const overflowsBottom = dropdownRect.bottom > settingsRect.bottom;
+    const overflowsTop = dropdownRect.top < settingsRect.top;
+
+    if (overflowsBottom || overflowsTop) {
+      const scrollTargetY = fontSelectRow.offsetTop;
+      settingsMenu.scrollTop = scrollTargetY;
+      requestAnimationFrame(() => {
+        settingsMenu.scrollTop = scrollTargetY;
+      });
+    }
+  });
+}
+
+function onDropdownShown(event) {
+  const target = event.target;
+
+  // === Font Selector ===
+  if (target === fontFamilySelect) {
+    scrollToSelectedOption(fontChoices);
+
+    if (scrollLocked) {
+      scrollAdjustQueue.push(adjustDropdownScroll);
+    } else {
+      adjustDropdownScroll();
+    }
+  }
+
+  // === Language Selector ===
+  else if (target === langSwitcher) {
+    scrollToSelectedOption(langChoices);
+
+    if (scrollLocked) {
+      scrollAdjustQueue.push(scrollToBottomOfSettingsMenu);
+    } else {
+      scrollToBottomOfSettingsMenu();
+    }
+  }
+}
+fontFamilySelect.addEventListener("showDropdown", onDropdownShown);
+langSwitcher.addEventListener("showDropdown", onDropdownShown);
+
+// make style tag has font styles set to each class
+function injectFontPreviewStyles(fontList) {
+  const style = document.createElement("style");
+  document.head.appendChild(style);
+
+  const cssLines = fontList.map((fontName) => {
+    const safeClass = fontName
+      .trim()
+      .replace(/\s+/g, "-")
+      .toLowerCase()
+      .replace(/[^a-z0-9\-_]/gi, "");
+    const fontCSS = `"${fontName}", 'Figtree', sans-serif`;
+
+    return `
+      .choices__list--dropdown .font-preview-${safeClass} {
+        font-family: ${fontCSS};
+      }
+    `;
+  });
+
+  style.textContent = cssLines.join("\n");
+}
+
 // get font using font-list and apply on launch
 window.electronAPI.getFonts().then((fonts) => {
   const bundledFonts = ["Iosevka", "Migu 1M", "Figtree"];
@@ -657,25 +990,40 @@ window.electronAPI.getFonts().then((fonts) => {
 
   const sortedFonts = cleanedFonts.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
-  sortedFonts.forEach((fontName) => {
-    const option = document.createElement("option");
-    option.value = fontName;
-    option.textContent = fontName;
-    option.style.fontFamily = `"${fontName}", "Figtree", sans-serif`;
-    fontFamilySelect.appendChild(option);
-  });
+  // create style tag
+  injectFontPreviewStyles(sortedFonts);
 
-  fontFamilySelect.value = selectedFontFamily;
+  // apply to choices by adding class
+  fontChoices.setChoices(
+    sortedFonts.map((fontName) => {
+      const safeClass = fontName
+        .trim()
+        .replace(/\s+/g, "-")
+        .toLowerCase()
+        .replace(/[^a-z0-9\-_]/gi, "");
+      return {
+        value: fontName,
+        label: `<span class="font-preview-${safeClass}">${fontName}</span>`,
+        html: true,
+      };
+    }),
+    "value",
+    "label",
+    true
+  );
+
+  fontChoices.setChoiceByValue(selectedFontFamily);
   applyFontToMonaco();
 });
 
 // apply font on change
 fontFamilySelect.addEventListener("change", () => {
-  selectedFontFamily = fontFamilySelect.value;
+  selectedFontFamily = fontChoices.getValue(true);
   localStorage.setItem("selectedFontFamily", selectedFontFamily);
   console.log(selectedFontFamily);
   applyFontToMonaco();
 });
+
 function applyFontToMonaco() {
   const cssFont = getCSSVar("--editor-font");
   let cleanFontFamily = selectedFontFamily.replace(/^"|"$/g, "");
@@ -689,59 +1037,6 @@ function applyFontToMonaco() {
     monaco.editor.remeasureFonts();
   });
 }
-
-// editor layout
-function applySettings() {
-  monacoEditor.updateOptions({
-    renderLineHighlight: settings.lineHighlight ? "line" : "none",
-    lineNumbers: settings.lineNumbers ? "on" : "off",
-    minimap: {
-      enabled: settings.minimap,
-    },
-    folding: settings.folding,
-  });
-  editor.style.marginLeft = settings.lineNumbers ? "20px" : "0px";
-
-  document.querySelector("#line-highlight .checkmark").style.display = settings.lineHighlight ? "inline-block" : "none";
-  document.querySelector("#line-num .checkmark").style.display = settings.lineNumbers ? "inline-block" : "none";
-  document
-    .querySelector("#minimap .checkmark")
-    ?.style?.setProperty("display", settings.minimap ? "inline-block" : "none");
-  document.querySelector("#toggleSyntaxHighlight .checkmark").style.display = settings.syntaxHighlight
-    ? "inline-block"
-    : "none";
-  document.querySelector("#toggleFolding .checkmark").style.display = settings.folding ? "inline-block" : "none";
-}
-
-function toggleSetting(key) {
-  settings[key] = !settings[key];
-  localStorage.setItem("editorSettings", JSON.stringify(settings));
-  applySettings();
-}
-
-applySettings();
-document.getElementById("line-highlight").onclick = () => toggleSetting("lineHighlight");
-document.getElementById("line-num").onclick = () => toggleSetting("lineNumbers");
-document.getElementById("minimap").onclick = () => toggleSetting("minimap");
-document.getElementById("toggleSyntaxHighlight").onclick = () => {
-  toggleSetting("syntaxHighlight");
-  monaco.editor.defineTheme("custom-theme", createCustomTheme());
-  monaco.editor.setTheme("custom-theme");
-  applyDecorations();
-};
-document.getElementById("toggleFolding").onclick = () => toggleSetting("folding");
-
-// open custom theme folder button
-document.getElementById("openThemeFolder").addEventListener("click", async () => {
-  try {
-    const userDataPath = await window.electronAPI.getUserDataPath();
-    const themeFolderPath = `${userDataPath}/themes`;
-    await window.electronAPI.openPath(themeFolderPath);
-    console.log("themes path opened:", themeFolderPath);
-  } catch (err) {
-    console.error("Failed to open path:", err);
-  }
-});
 
 // font size button event
 // font size on launch
@@ -776,27 +1071,15 @@ fontSizeIncrease.addEventListener("click", () => {
   updatePersistentFontSize(persistentFontSize + 1);
 });
 
-// tab size button event
-// tab size on launch
-tabSizeValue.textContent = tabSize;
-monacoEditor.updateOptions({ tabSize });
-
-function updateTabSize(newSize) {
-  tabSize = Math.min(10, Math.max(1, newSize));
-  tabSizeValue.textContent = tabSize;
-  localStorage.setItem("tabSize", tabSize);
-  monacoEditor.updateOptions({ tabSize });
-
-  tabSizeDecrease.classList.toggle("disabled", tabSize <= 1);
-  tabSizeIncrease.classList.toggle("disabled", tabSize >= 10);
-
-  updateStatusBar?.();
-}
-
-updateTabSize(tabSize);
-
-tabSizeDecrease.addEventListener("click", () => updateTabSize(tabSize - 1));
-tabSizeIncrease.addEventListener("click", () => updateTabSize(tabSize + 1));
+// font settings reset button
+document.querySelector("#settings-menu .font .reset").addEventListener("click", () => {
+  // reset persistentFontSize, selectedFontFamily
+  updatePersistentFontSize(16);
+  selectedFontFamily = "Iosevka";
+  localStorage.setItem("selectedFontFamily", selectedFontFamily);
+  fontChoices.setChoiceByValue(selectedFontFamily);
+  applyFontToMonaco();
+});
 
 // update font size with ctrl + mouse wheel / + - (temporary)
 const updateFontSize = (newSize) => {
@@ -819,7 +1102,7 @@ function attachCtrlWheelListener() {
   }
 
   wheelListener = (e) => {
-    if (e.ctrlKey) {
+    if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
       updateFontSize(fontSize + (e.deltaY < 0 ? 1 : -1));
     }
@@ -830,7 +1113,7 @@ function attachCtrlWheelListener() {
 
 // Ctrl + + / -
 window.addEventListener("keydown", (e) => {
-  if (e.ctrlKey) {
+  if (e.ctrlKey || e.metaKey) {
     if (e.key === "=" || e.key === "+") {
       e.preventDefault();
       updateFontSize(fontSize + 1);
@@ -841,6 +1124,112 @@ window.addEventListener("keydown", (e) => {
       e.preventDefault();
       updateFontSize(persistentFontSize); // reset with ctrl + 0
     }
+  }
+});
+
+// editor settings
+function applySettings() {
+  monacoEditor.updateOptions({
+    renderLineHighlight: settings.lineHighlight ? "line" : "none",
+    lineNumbers: settings.lineNumbers ? "on" : "off",
+    minimap: {
+      enabled: settings.minimap,
+    },
+    folding: settings.folding,
+  });
+  editor.style.marginLeft = settings.lineNumbers ? "20px" : "0px";
+
+  document.querySelector("#line-highlight .checkmark").style.display = settings.lineHighlight ? "inline-block" : "none";
+  document.querySelector("#line-num .checkmark").style.display = settings.lineNumbers ? "inline-block" : "none";
+  document
+    .querySelector("#minimap .checkmark")
+    ?.style?.setProperty("display", settings.minimap ? "inline-block" : "none");
+  document.querySelector("#toggleSyntaxHighlight .checkmark").style.display = settings.syntaxHighlight
+    ? "inline-block"
+    : "none";
+  document.querySelector("#toggleFolding .checkmark").style.display = settings.folding ? "inline-block" : "none";
+
+  // status bar visibility
+  const statusBar = document.getElementById("status-bar");
+  const checkmark = document.querySelector("#toggleStatusBar .checkmark");
+  if (settings.statusBarVisible) {
+    statusBar.style.display = "flex";
+    checkmark.style.display = "inline-block";
+    editor.style.height = "calc(100vh - 35px - 25px)";
+    settingsMenu.style.height = "calc(100vh - 35px - 25px)";
+  } else {
+    statusBar.style.display = "none";
+    checkmark.style.display = "none";
+    editor.style.height = "calc(100vh - 35px)";
+    settingsMenu.style.height = "calc(100vh - 35px)";
+  }
+
+  if (monacoEditor) {
+    setTimeout(() => monacoEditor.layout(), 0);
+  }
+}
+
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  localStorage.setItem("editorSettings", JSON.stringify(settings));
+  applySettings();
+}
+applySettings();
+
+document.getElementById("line-highlight").onclick = () => toggleSetting("lineHighlight");
+document.getElementById("line-num").onclick = () => toggleSetting("lineNumbers");
+document.getElementById("minimap").onclick = () => toggleSetting("minimap");
+document.getElementById("toggleSyntaxHighlight").onclick = () => {
+  toggleSetting("syntaxHighlight");
+  monaco.editor.defineTheme("custom-theme", createCustomTheme());
+  monaco.editor.setTheme("custom-theme");
+  applyDecorations();
+};
+document.getElementById("toggleFolding").onclick = () => toggleSetting("folding");
+document.getElementById("toggleStatusBar").onclick = () => toggleSetting("statusBarVisible");
+
+// editor settings reset button
+document.querySelector("#settings-menu #settingsLayout .reset").addEventListener("click", () => {
+  // reset settings, tabSize
+  Object.assign(settings, defaultSettings);
+  localStorage.setItem("editorSettings", JSON.stringify(settings));
+
+  tabSize = 4;
+  localStorage.setItem("tabSize", tabSize);
+
+  applySettings();
+  updateTabSize(tabSize);
+});
+
+// tab size button event
+// tab size on launch
+tabSizeValue.textContent = tabSize;
+monacoEditor.updateOptions({ tabSize });
+
+function updateTabSize(newSize) {
+  tabSize = Math.min(10, Math.max(1, newSize));
+  tabSizeValue.textContent = tabSize;
+  localStorage.setItem("tabSize", tabSize);
+  monacoEditor.updateOptions({ tabSize });
+
+  tabSizeDecrease.classList.toggle("disabled", tabSize <= 1);
+  tabSizeIncrease.classList.toggle("disabled", tabSize >= 10);
+
+  updateStatusBar?.();
+}
+updateTabSize(tabSize);
+tabSizeDecrease.addEventListener("click", () => updateTabSize(tabSize - 1));
+tabSizeIncrease.addEventListener("click", () => updateTabSize(tabSize + 1));
+
+// open custom theme folder button
+document.getElementById("openThemeFolder").addEventListener("click", async () => {
+  try {
+    const userDataPath = await window.electronAPI.getUserDataPath();
+    const themeFolderPath = `${userDataPath}/themes`;
+    await window.electronAPI.openPath(themeFolderPath);
+    console.log("themes path opened:", themeFolderPath);
+  } catch (err) {
+    console.error("Failed to open path:", err);
   }
 });
 
@@ -867,6 +1256,27 @@ window.triggerReplace = function () {
 };
 document.getElementById("triggerReplaceBtn").addEventListener("click", triggerReplace);
 
+// call Go to Line from menu
+window.triggerGoToLine = function () {
+  monacoEditor?.focus();
+  monacoEditor.getAction("editor.action.gotoLine").run();
+};
+document.getElementById("triggerGoToLineBtn").addEventListener("click", triggerGoToLine);
+
+// call Go to Symbol from menu
+window.triggerGoToSymbol = function () {
+  monacoEditor?.focus();
+  monacoEditor.getAction("editor.action.quickOutline").run();
+};
+document.getElementById("triggerGoToSymbolBtn").addEventListener("click", triggerGoToSymbol);
+
+// call Command Palette from menu
+window.triggerShowCommands = function () {
+  monacoEditor?.focus();
+  monacoEditor.trigger("keyboard", "editor.action.quickCommand", {});
+};
+document.getElementById("triggerShowCommandsBtn").addEventListener("click", triggerShowCommands);
+
 // initial tab create
 createTab();
 switchTab(tabData[0]);
@@ -885,6 +1295,7 @@ menuButton.onclick = (e) => {
 
 // close menu & context menu on outside click
 document.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".choices")) return;
   if (!customContextMenu.contains(e.target)) {
     customContextMenu.style.display = "none";
   }
@@ -1177,7 +1588,6 @@ window.electronAPI.onCssFileUpdated(async (path) => {
 document.getElementById("openFileBtn").addEventListener("click", openFile);
 document.getElementById("saveFileBtn").addEventListener("click", saveFile);
 document.getElementById("saveAsFileBtn").addEventListener("click", saveAsFile);
-document.getElementById("toggleStatusBar").addEventListener("click", toggleStatusBar);
 
 // print button
 // document.getElementById("print-button").addEventListener("click", () => {
@@ -1260,17 +1670,6 @@ document.addEventListener("mousemove", (e) => {
   mouseY = e.clientY;
   if (tabAreaHovered && !isMouseInsideTabsContainer()) handleTabsMouseLeave();
 });
-// enable tabs scroll x
-tabs.addEventListener(
-  "wheel",
-  (e) => {
-    if (e.deltaY !== 0) {
-      e.preventDefault();
-      tabs.scrollLeft += e.deltaY;
-    }
-  },
-  { passive: false }
-);
 
 // new window button
 newWindowBtn.addEventListener("click", () => {
@@ -1322,32 +1721,6 @@ window.addEventListener("dragover", (e) => {
   }
 });
 
-// toggle statusbar
-function toggleStatusBar() {
-  statusBarVisible = !statusBarVisible;
-  localStorage.setItem("statusBarVisible", statusBarVisible);
-  const statusBar = document.getElementById("status-bar");
-  const checkmark = document.querySelector("#toggleStatusBar .checkmark");
-
-  if (statusBarVisible) {
-    statusBar.style.display = "flex";
-    checkmark.style.display = "inline-block";
-    editor.style.height = "calc(100vh - 35px - 25px)";
-    settingsMenu.style.height = "calc(100vh - 35px - 25px)";
-  } else {
-    statusBar.style.display = "none";
-    checkmark.style.display = "none";
-    editor.style.height = "calc(100vh - 35px)";
-    settingsMenu.style.height = "calc(100vh - 35px)";
-  }
-
-  if (monacoEditor) {
-    setTimeout(() => monacoEditor.layout(), 0);
-  }
-}
-toggleStatusBar();
-toggleStatusBar();
-
 // update status bar
 function updateStatusBar() {
   if (!monacoEditor) return;
@@ -1383,8 +1756,7 @@ function updateStatusBar() {
   zoomLevelEl.textContent = `${Math.round((fontSize / persistentFontSize) * 100)}%`;
   lineEndingEl.textContent = lineEnding;
   encodingEl.textContent = currentEncoding;
-  encodingEl.title =
-    "This editor supports only UTF-8.\nIf you want to use other encodings, please convert them to UTF-8 before opening.";
+  encodingEl.title = i18next.t("statusBar.encodingTooltip");
 }
 
 // tab dragging
@@ -1610,6 +1982,8 @@ async function attemptCloseTab(data) {
             if (prev && prev.classList.contains("tab")) {
               prev.classList.add("prev-active");
             }
+
+            setTimeout(() => monacoEditor?.focus(), 0);
           }
         }
       };
@@ -1701,6 +2075,8 @@ async function attemptCloseTab(data) {
         if (prev && prev.classList.contains("tab")) {
           prev.classList.add("prev-active");
         }
+
+        setTimeout(() => monacoEditor?.focus(), 0);
       }
     }
 
@@ -1711,10 +2087,16 @@ async function attemptCloseTab(data) {
 // add to recently closed files
 function addToRecentlyClosedFiles(filePath) {
   if (!filePath) return;
+
   recentlyClosedFiles = recentlyClosedFiles.filter((path) => path !== filePath);
   recentlyClosedFiles.unshift(filePath);
   if (recentlyClosedFiles.length > 10) {
     recentlyClosedFiles = recentlyClosedFiles.slice(0, 10);
+  }
+
+  if (recentlyClosedFiles.length >= 1) {
+    const reopenBtn = document.querySelector('[data-action="reopenClosedTab"]');
+    reopenBtn?.classList.remove("disabled");
   }
 }
 // open recently closed files
@@ -1725,6 +2107,10 @@ async function reopenRecentlyClosedFile() {
   }
   const filePath = recentlyClosedFiles.shift();
   await loadFileByPath(filePath);
+  if (recentlyClosedFiles.length === 0) {
+    const reopenBtn = document.querySelector('[data-action="reopenClosedTab"]');
+    reopenBtn?.classList.add("disabled");
+  }
 }
 
 // close window
@@ -1829,13 +2215,23 @@ function switchTab(data) {
     currentActive.wordWrap = isWordWrapOn;
   }
 
+  // load tab-specific settings
   fontSize = data.fontSize || persistentFontSize; // font size for each tabs
-  monacoEditor.updateOptions({ fontSize });
   isWordWrapOn = data.wordWrap ?? true;
   isMarkdownOn = data.isMarkdown ?? false;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+
+  const editorOptions = {
+    fontSize,
+    wordWrap: isWordWrapOn ? "on" : "off",
+    scrollbar: {
+      horizontal: isWordWrapOn ? "hidden" : "auto",
+    },
+    autoClosingBrackets: isMarkdownOn ? "always" : "never",
+  };
+
+  // apply settings before model switch
+  monacoEditor.updateOptions(editorOptions);
   monaco.editor.setModelLanguage(data.model, isMarkdownOn ? "markdown" : "monapad");
-  monacoEditor.updateOptions({ autoClosingBrackets: isMarkdownOn ? "always" : "never" });
 
   // update tab style
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -1867,21 +2263,19 @@ function switchTab(data) {
 
   updateStatusBar();
 
-  // restore WordWrap state
-  isWordWrapOn = data.wordWrap ?? true;
-  monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+  // re-apply tab-specific settings after model switch
+  monacoEditor.updateOptions(editorOptions);
+  monaco.editor.setModelLanguage(data.model, isMarkdownOn ? "markdown" : "monapad");
+
+  // update WordWrap toggle button UI
   const wrapBtn = document.querySelector('button[data-action="wordWrap"] svg.checkmark');
   if (wrapBtn) wrapBtn.style.display = isWordWrapOn ? "inline-block" : "none";
 
-  // restore Markdown state
-  isMarkdownOn = data.isMarkdown ?? false;
-  monaco.editor.setModelLanguage(data.model, isMarkdownOn ? "markdown" : "monapad");
-  monacoEditor.updateOptions({ autoClosingBrackets: isMarkdownOn ? "always" : "never" });
-
-  applyDecorations();
-
+  // update Markdown toggle button UI
   const mdBtn = document.querySelector('button[data-action="toggleMarkdown"] svg.checkmark');
   if (mdBtn) mdBtn.style.display = isMarkdownOn ? "inline-block" : "none";
+
+  applyDecorations();
 
   // stop current watcher
   if (currentWatcher) {
@@ -1984,7 +2378,7 @@ function reloadButton(tab, filePath, mode) {
     const button = document.createElement("button");
     button.classList.add("reload-button");
     tab.element.classList.add("has-reload-button");
-    button.title = "Update file and apply external changes";
+    button.title = i18next.t("message.ReloadButtonTooltip");
     button.innerHTML = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17">
         <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round"
@@ -2282,7 +2676,7 @@ function processQueue() {
     return;
   }
   el.classList.add("show");
-  const duration = id === "file-updated" ? 2500 : 1500;
+  const duration = 1500;
   setTimeout(() => {
     el.classList.remove("show");
     processQueue();
@@ -2298,13 +2692,25 @@ window.electronAPI.onWindowFocus((focused) => {
 });
 
 // Tab context menu handler
-document.addEventListener("contextmenu", (e) => {
+document.addEventListener("contextmenu", async (e) => {
   const tabElement = e.target.closest(".tab");
   if (!tabElement) return;
 
   e.preventDefault();
   rightClickedTab = tabData.find((t) => t.element === tabElement);
   if (!rightClickedTab) return;
+
+  // update reopen closed tab button
+  const validPaths = [];
+  for (const path of recentlyClosedFiles) {
+    const exists = await window.electronAPI.fileExists(path);
+    if (exists) validPaths.push(path);
+  }
+  if (validPaths.length !== recentlyClosedFiles.length) {
+    recentlyClosedFiles = validPaths;
+    const reopenBtn = document.querySelector('[data-action="reopenClosedTab"]');
+    reopenBtn.classList.toggle("disabled", recentlyClosedFiles.length === 0);
+  }
 
   // Hide editor context menu
   customContextMenu.style.display = "none";
@@ -2486,6 +2892,10 @@ tabContextMenu.addEventListener("click", async (e) => {
       }
       break;
 
+    case "reopenClosedTab":
+      await reopenRecentlyClosedFile();
+      break;
+
     case "openInNewWindow":
       await openTabInNewWindow(targetTab);
       break;
@@ -2542,12 +2952,47 @@ customContextMenu.addEventListener("click", async (e) => {
   const model = monacoEditor.getModel();
 
   switch (action) {
-    case "cut":
-      document.execCommand("cut");
+    case "copy": {
+      try {
+        const selections = monacoEditor.getSelections();
+        const model = monacoEditor.getModel();
+        let textToCopy = "";
+
+        if (selections && selections.length > 0) {
+          textToCopy = selections.map((sel) => model.getValueInRange(sel)).join("\n");
+        }
+
+        await navigator.clipboard.writeText(textToCopy);
+      } catch (err) {
+        console.error("Copy failed:", err);
+      }
       break;
-    case "copy":
-      document.execCommand("copy");
+    }
+
+    case "cut": {
+      try {
+        const selections = monacoEditor.getSelections();
+        const model = monacoEditor.getModel();
+        let textToCut = "";
+
+        if (selections && selections.length > 0) {
+          textToCut = selections.map((sel) => model.getValueInRange(sel)).join("\n");
+          await navigator.clipboard.writeText(textToCut);
+          monacoEditor.executeEdits(
+            "cut",
+            selections.map((sel) => ({
+              range: sel,
+              text: "",
+              forceMoveMarkers: true,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Cut failed:", err);
+      }
       break;
+    }
+
     case "paste":
       try {
         const text = await navigator.clipboard.readText();
@@ -2556,19 +3001,28 @@ customContextMenu.addEventListener("click", async (e) => {
         console.error("Paste failed:", err);
       }
       break;
+
     case "undo":
       monacoEditor.trigger("keyboard", "undo", null);
       break;
+
     case "redo":
       monacoEditor.trigger("keyboard", "redo", null);
       break;
+
     case "selectAll":
       monacoEditor.trigger("keyboard", "editor.action.selectAll", null);
       break;
+
     case "wordWrap":
       isWordWrapOn = !isWordWrapOn;
       if (currentTab) currentTab.wordWrap = isWordWrapOn;
-      monacoEditor.updateOptions({ wordWrap: isWordWrapOn ? "on" : "off" });
+      monacoEditor.updateOptions({
+        wordWrap: isWordWrapOn ? "on" : "off",
+        scrollbar: {
+          horizontal: isWordWrapOn ? "hidden" : "auto",
+        },
+      });
       {
         const btn = e.target.closest('button[data-action="wordWrap"]');
         if (btn) {
@@ -2577,6 +3031,7 @@ customContextMenu.addEventListener("click", async (e) => {
         }
       }
       break;
+
     case "toggleMarkdown":
       const currentLang = monaco.editor.getModel(monacoEditor.getModel().uri).getLanguageId();
       isMarkdownOn = currentLang !== "markdown";
@@ -2615,13 +3070,33 @@ editor.addEventListener("click", () => {
   settingsMenu.style.display = "none";
 });
 settingsMenu.addEventListener("click", (e) => {
-  e.stopPropagation();
+  langChoices.hideDropdown();
+  fontChoices.hideDropdown();
+  // e.stopPropagation();
+});
+// prevent focus() from auto scrolling dropdown into view
+settingsMenu.addEventListener("focusin", () => {
+  if (scrollLocked) return;
+  scrollLocked = true;
+  lastScrollTop = settingsMenu.scrollTop;
+
+  requestAnimationFrame(() => {
+    settingsMenu.scrollTop = lastScrollTop;
+  });
+
+  setTimeout(() => {
+    settingsMenu.scrollTop = lastScrollTop;
+    scrollLocked = false;
+
+    scrollAdjustQueue.forEach((fn) => fn());
+    scrollAdjustQueue = [];
+  }, 10);
 });
 
 // shortcuts
 window.addEventListener("keydown", async (e) => {
   // Ctrl + S (+ Shift)
-  if (e.ctrlKey && e.code === "KeyS") {
+  if ((e.ctrlKey || e.metaKey) && e.code === "KeyS") {
     e.preventDefault();
     if (e.shiftKey) {
       saveAsFile();
@@ -2630,28 +3105,32 @@ window.addEventListener("keydown", async (e) => {
     }
   }
   // Ctrl + O
-  if (e.ctrlKey && e.code === "KeyO") {
+  if ((e.ctrlKey || e.metaKey) && e.code === "KeyO") {
     e.preventDefault();
     openFile();
   }
+  if ((e.ctrlKey || e.metaKey) && e.code === "Comma") {
+    e.preventDefault();
+    settingsMenu.style.display = "block";
+  }
   // Ctrl + Shift + T
-  if (e.ctrlKey && e.shiftKey && e.code === "KeyT") {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "KeyT") {
     e.preventDefault();
     await reopenRecentlyClosedFile();
   }
   // Ctrl + T
-  else if (e.ctrlKey && !e.shiftKey && e.code === "KeyT") {
+  else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === "KeyT") {
     e.preventDefault();
     createTab();
     switchTab(tabData.at(-1));
   }
   // Ctrl + N
-  if (e.ctrlKey && e.code === "KeyN") {
+  if ((e.ctrlKey || e.metaKey) && e.code === "KeyN") {
     e.preventDefault();
     window.electronAPI.createNewWindow();
   }
   // Ctrl + W
-  if (e.ctrlKey && e.code === "KeyW") {
+  if ((e.ctrlKey || e.metaKey) && e.code === "KeyW") {
     e.preventDefault();
     const data = currentTab;
     if (!data) return;
@@ -2659,7 +3138,7 @@ window.addEventListener("keydown", async (e) => {
   }
 
   // Ctrl + 1-9
-  if (e.ctrlKey && /^Digit[1-9]$/.test(e.code)) {
+  if ((e.ctrlKey || e.metaKey) && /^Digit[1-9]$/.test(e.code)) {
     e.preventDefault();
     const index = parseInt(e.code.slice(-1), 10) - 1;
     if (tabData[index] && tabData[index] !== currentTab) {
@@ -2667,12 +3146,20 @@ window.addEventListener("keydown", async (e) => {
     }
   }
 
-  // Ctrl + Tab
-  if (e.ctrlKey && e.code === "Tab") {
+  // Ctrl + Tab (+ Shift)
+  if ((e.ctrlKey || e.metaKey) && e.code === "Tab") {
     e.preventDefault();
     if (!currentTab) return;
+
     const currentIndex = tabData.indexOf(currentTab);
-    const nextIndex = (currentIndex + 1) % tabData.length;
+    let nextIndex;
+
+    if (e.shiftKey) {
+      nextIndex = (currentIndex - 1 + tabData.length) % tabData.length;
+    } else {
+      nextIndex = (currentIndex + 1) % tabData.length;
+    }
+
     switchTab(tabData[nextIndex]);
   }
 });

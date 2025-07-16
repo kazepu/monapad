@@ -126,12 +126,13 @@
         /* monaco editor color */
         --vscode-editor-background: var(--color1);
         --vscode-editor-foreground: var(--editorText);
+        --vscode-errorForeground: var(--warn);
+        --vscode-inputValidation-errorBorder: var(--warn);
         --vscode-editor-lineHighlightBackground: var(--color2);
         --vscode-editor-lineHighlightBorder: #00000000;
         --vscode-editor-wordHighlightBackground: #00000000;
         --vscode-editorWidget-background: var(--color2);
         --vscode-editorHoverWidget-background: var(--color2);
-        --vscode-quickInputList-focusBackground: var(--color3);
         --vscode-input-background: var(--color1);
         --vscode-list-activeSelectionBackground: var(--color3);
         --vscode-list-dropBackground: var(--color3);
@@ -146,6 +147,19 @@
         --vscode-editorLineNumber-foreground: #565b6680;
         --vscode-editorLineNumber-activeForeground: var(--grayOut);
         --vscode-editor-selectionBackground: #569cd644;
+
+        /* find match */
+        --vscode-editor-findMatchBackground: #d18616a1; /* current match position */
+
+        /* navigation widget */
+        --vscode-pickerGroup-foreground: var(--grayOut); /* symbols() text */
+        --vscode-quickInputList-focusBackground: var(--color3); /* focus background */
+        --vscode-symbolIcon-classForeground: var(--highlight); /* icon */
+        --vscode-symbolIcon-functionForeground: #a0bfd9; /* icon */
+        --vscode-symbolIcon-methodForeground: var(--editorText); /* icon */
+        --vscode-quickInputList-focusIconForeground: var(--editorText); /* focus icon */
+        --vscode-quickInput-foreground: var(--grayOut); /* text */
+        --vscode-quickInputList-focusForeground: var(--editorText); /* forcus text */
       }
 
       body {
@@ -172,9 +186,17 @@
       .monaco-editor .line-numbers {
         font-family: "Consolas", "Courier New", monospace !important;
       }
-      /* editor top shadow */
+      /* editor scroll shadow */
       .monaco-editor .scroll-decoration {
-        display: none;
+        height: 10px !important;
+        box-shadow: var(--color1) 0 6px 6px 0px inset !important;
+        pointer-events: none;
+      }
+      .monaco-editor .minimap-shadow-visible {
+        width: 10px !important;
+        left: -10px !important;
+        box-shadow: var(--color1) -6px 0 6px 0px inset !important;
+        pointer-events: none;
       }
       /* go to line widget input focus border */
       :focus-visible {
@@ -756,7 +778,7 @@
         line-height: 25px;
         flex: 1;
         min-width: 0;
-        max-width: calc(100vw - 350px);
+        max-width: 100%;
         overflow: hidden;
         white-space: nowrap;
         text-overflow: ellipsis;
@@ -1015,19 +1037,45 @@
         top: 35px;
         right: 0px;
         user-select: none;
-        padding: 10px 0 40px 0;
+        padding: 10px 0 60px 0;
         box-sizing: border-box;
         display: none;
         overflow-y: auto;
         border-top: 1px solid var(--color3);
         border-left: 1px solid var(--color3);
+        overflow-anchor: none;
+        scroll-behavior: auto !important;
       }
       #settings-menu h1 {
-        font-size: 14px;
-        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
         color: var(--grayOut);
         margin: 0 0 10px 0;
         padding: 0 20px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      #settings-menu .reset {
+        display: none;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        width: 17px;
+        opacity: 0.5;
+      }
+      #settings-menu h1:hover .reset {
+        display: flex;
+      }
+      #settings-menu .reset svg {
+        width: 12px;
+        height: 12px;
+      }
+      #settings-menu .reset svg path {
+        stroke-width: 2px;
+        stroke: var(--grayOut);
+      }
+      #settings-menu h1 .reset:hover {
+        opacity: 1;
       }
       #settings-menu .hr {
         height: 1px;
@@ -1100,8 +1148,8 @@
       #font-size-value {
         color: var(--editorText);
       }
-      #font-family-select,
-      #langSwitcher {
+      /* #langSwitcher, */
+      #font-family-select {
         all: unset;
         display: block;
         height: 28px;
@@ -1264,10 +1312,22 @@
           <span class="label">Replace</span>
           <span class="shortcut">Ctrl + H</span>
         </button>
+        <button id="triggerGoToLineBtn">
+          <span class="label">Go to Line</span>
+          <span class="shortcut">Ctrl + G</span>
+        </button>
+        <button id="triggerGoToSymbolBtn">
+          <span class="label">Go to Heading</span>
+          <span class="shortcut">Ctrl + Shift + O</span>
+        </button>
+        <button id="triggerShowCommandsBtn">
+          <span class="label">Command List</span>
+          <span class="shortcut">F1</span>
+        </button>
         <div class="hr"></div>
         <!-- <button id="print-button">Print</button> -->
         <button id="changeTheme">
-          <span class="btn-text">Theme</span>
+          <span class="btn-text">Themes</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 5.65 9.77"
@@ -1278,21 +1338,10 @@
             <polyline fill="none" stroke="#fff" stroke-miterlimit="10" points=".35 9.42 4.94 4.83 .35 .36" />
           </svg>
         </button>
-        <button id="toggleStatusBar">
-          <span class="btn-text">Status Bar</span>
-          <svg
-            class="checkmark"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 10.23 7.15"
-            style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
-          >
-            <polyline
-              points=".5 3.58 3.58 6.65 9.73 .5"
-              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-            />
-          </svg>
+        <button id="settingsBtn">
+          <span class="label">Settings</span>
+          <span class="shortcut">Ctrl + ,</span>
         </button>
-        <button id="settingsBtn">Settings</button>
         <div class="hr"></div>
         <button id="aboutBtn">About</button>
       </div>
@@ -1359,7 +1408,7 @@
       <!-- messages -->
       <div id="file-saved" class="message">Saved</div>
       <div id="file-opened" class="message">File already opened!</div>
-      <div id="file-updated" class="message">File updated with external changes</div>
+      <div id="file-updated" class="message">File reloaded</div>
       <div id="file-modified" class="message">File modified externally!</div>
 
       <!-- editor context menu -->
@@ -1442,6 +1491,9 @@
           <span class="label">Open Path</span>
         </button>
         <div class="hr"></div>
+        <button data-action="reopenClosedTab" class="disabled">
+          <span class="label">Reopen Closed Tab</span>
+        </button>
         <button data-action="openInNewWindow">
           <span class="label">Open in New Window</span>
         </button>
@@ -1449,70 +1501,25 @@
 
       <!-- settings -->
       <div id="settings-menu" class="scrollable">
-        <!-- Font -->
-        <h1 class="font">Font</h1>
-        <div class="hr"></div>
-        <div class="row select-row">
-          <!-- <div class="label font">Font</div> -->
-          <div class="select">
-            <div id="font-select-wrapper">
-              <select id="font-family-select" class="scrollable"></select>
-            </div>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="label size">Size</div>
-          <div class="control">
-            <div id="font-size-decrease" class="size-change-btn">
-              <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
-                <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
-              </svg>
-            </div>
-            <span
-              id="font-size-value"
-              style="user-select: none; min-width: 25px; display: inline-block; text-align: center"
-            ></span>
-            <div id="font-size-increase" class="size-change-btn">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 11.95 11.95"
-                style="vertical-align: middle; width: 11px; height: 11px"
-              >
-                <line
-                  x1="5.97"
-                  y1="11.45"
-                  x2="5.97"
-                  y2=".5"
-                  fill="none"
-                  stroke="#fff"
-                  stroke-linecap="round"
-                  stroke-miterlimit="10"
-                />
-                <line
-                  x1="11.45"
-                  y1="5.97"
-                  x2=".5"
-                  y2="5.97"
-                  fill="none"
-                  stroke="#fff"
-                  stroke-linecap="round"
-                  stroke-miterlimit="10"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <p id="fontDescription" class="settings-info">
-          Word wrap may misalign with proportional fonts. Use a monospaced font if needed.
-        </p>
-
         <!-- Editor Layout -->
-        <h1 style="margin-top: 50px" id="settingsLayout">Editor</h1>
+        <h1 id="settingsLayout">
+          <span class="h1">Editor</span>
+          <span class="reset" title="Reset Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17">
+              <path
+                fill="none"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16.43,9.54c-.57,4.38-4.59,7.47-8.97,6.89C3.08,15.86,0,11.84.57,7.46.99,4.22,3.34,1.57,6.51.76c3.9-1,7.94,1.01,9.43,4.75"
+              />
+              <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" d="M16.5.5v5h-5" />
+            </svg>
+          </span>
+        </h1>
         <div class="hr"></div>
         <button id="line-highlight">
-          <span>Highlight current line</span>
+          <span>Line Highlight</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1526,35 +1533,7 @@
           </svg>
         </button>
         <button id="line-num">
-          <span>Display line numbers</span>
-          <svg
-            class="checkmark"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 10.23 7.15"
-            style="width: 13px; height: 13px; stroke: #fff; fill: none"
-          >
-            <polyline
-              points=".5 3.58 3.58 6.65 9.73 .5"
-              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-            />
-          </svg>
-        </button>
-        <button id="minimap">
-          <span>Display minimap</span>
-          <svg
-            class="checkmark"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 10.23 7.15"
-            style="width: 13px; height: 13px; stroke: #fff; fill: none"
-          >
-            <polyline
-              points=".5 3.58 3.58 6.65 9.73 .5"
-              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
-            />
-          </svg>
-        </button>
-        <button id="toggleSyntaxHighlight">
-          <span>Syntax highlight</span>
+          <span>Line Numbers</span>
           <svg
             class="checkmark"
             xmlns="http://www.w3.org/2000/svg"
@@ -1574,6 +1553,48 @@
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 10.23 7.15"
             style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="minimap">
+          <span>Minimap</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="toggleSyntaxHighlight">
+          <span>Syntax Highlighting</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="width: 13px; height: 13px; stroke: #fff; fill: none"
+          >
+            <polyline
+              points=".5 3.58 3.58 6.65 9.73 .5"
+              style="fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round"
+            />
+          </svg>
+        </button>
+        <button id="toggleStatusBar">
+          <span>Status Bar</span>
+          <svg
+            class="checkmark"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 10.23 7.15"
+            style="display: none; width: 13px; height: 13px; stroke: #fff; fill: none"
           >
             <polyline
               points=".5 3.58 3.58 6.65 9.73 .5"
@@ -1624,28 +1645,92 @@
           </div>
         </div>
 
+        <!-- Font -->
+        <h1 style="margin-top: 50px" class="font">
+          <span class="h1">Font</span>
+          <span class="reset" title="Reset Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 17 17">
+              <path
+                fill="none"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16.43,9.54c-.57,4.38-4.59,7.47-8.97,6.89C3.08,15.86,0,11.84.57,7.46.99,4.22,3.34,1.57,6.51.76c3.9-1,7.94,1.01,9.43,4.75"
+              />
+              <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" d="M16.5.5v5h-5" />
+            </svg>
+          </span>
+        </h1>
+        <div class="hr"></div>
+        <div class="row select-row font-select-row">
+          <select id="font-family-select" class="scrollable"></select>
+        </div>
+
+        <div class="row">
+          <div class="label size">Size</div>
+          <div class="control">
+            <div id="font-size-decrease" class="size-change-btn">
+              <svg viewBox="0 0 12.47 1" style="vertical-align: middle; width: 11px; height: 11px">
+                <line x1="11.97" y1=".5" x2=".5" y2=".5" stroke="#fff" stroke-linecap="round" fill="none" />
+              </svg>
+            </div>
+            <span
+              id="font-size-value"
+              style="user-select: none; min-width: 25px; display: inline-block; text-align: center"
+            ></span>
+            <div id="font-size-increase" class="size-change-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 11.95 11.95"
+                style="vertical-align: middle; width: 11px; height: 11px"
+              >
+                <line
+                  x1="5.97"
+                  y1="11.45"
+                  x2="5.97"
+                  y2=".5"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+                <line
+                  x1="11.45"
+                  y1="5.97"
+                  x2=".5"
+                  y2="5.97"
+                  fill="none"
+                  stroke="#fff"
+                  stroke-linecap="round"
+                  stroke-miterlimit="10"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <p id="fontDescription" class="settings-info">
+          Word wrap may misalign with proportional fonts. Use a monospaced font if needed.
+        </p>
+
         <!-- Custom Theme -->
         <h1 style="margin: 50px 0 10px 0" id="settingsCustomTheme">Custom Theme</h1>
         <div class="hr"></div>
         <button id="openThemeFolder">Open Theme Folder</button>
 
         <p id="customThemeDescription" class="settings-info">
-          Apply custom themes by creating CSS files here. Details
+          Create a CSS file in this folder to add and apply custom themes from the theme menu. Details
           <a href="https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md" target="_blank">here</a>.
         </p>
 
         <!-- language -->
         <h1 style="margin: 50px 0 10px 0" id="settingsLanguage">Language</h1>
         <div class="hr"></div>
-        <div class="row select-row">
-          <div class="select">
-            <div id="lang-select-wrapper">
-              <select id="langSwitcher">
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-              </select>
-            </div>
-          </div>
+        <div class="row select-row lang-select-row">
+          <select id="langSwitcher">
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
         </div>
 
         <p id="langDescription" class="settings-info">
@@ -1687,30 +1772,23 @@
                 <div id="version-text"></div>
               </div>
             </div>
-            <p style="margin-top: 12px" id="description">
-              Free and open source text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.
-            </p>
+            <p style="margin-top: 12px" id="version-detail-text"></p>
             <p>
-              <span>GitHub:</span><br />
-              <a href="https://github.com/sheetau/monapad" target="_blank">https://github.com/sheetau/monapad</a>
-            </p>
-            <p>
-              <span id="discordServer">Discord Server:</span><br />
+              <span id="creator">Creator</span>: <a href="https://linktr.ee/sheetau" target="_blank">Sheeta</a><br />
+              GitHub: <a href="https://github.com/sheetau/monapad" target="_blank">https://github.com/sheetau/monapad</a
+              ><br />
+              <span id="discordServer">Server</span>:
               <a href="https://discord.gg/2dXs5HwXuW" target="_blank">https://discord.gg/2dXs5HwXuW</a>
             </p>
-            <p>
-              <span id="creator">Sheeta (Creator):</span><br />
-              <a href="https://linktr.ee/sheetau" target="_blank">https://linktr.ee/sheetavn</a>
-            </p>
             <p style="margin-bottom: 0">
-              <span id="disclaimer-title">Disclaimer:</span><br />
+              <span id="disclaimer-title">Disclaimer</span>:<br />
               <span id="disclaimer">
                 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
                 LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
                 NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
                 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
                 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.<br /><br />
-                Copyright (c) 2025 Sheeta.
+                Copyright © 2025 Sheeta.
               </span>
             </p>
           </div>

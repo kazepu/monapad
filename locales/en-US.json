@@ -5,7 +5,8 @@
   "statusBar": {
     "line": "Ln",
     "col": "Col",
-    "selection": "({{count}} selected)"
+    "selection": "({{count}} selected)",
+    "encodingTooltip": "This editor supports only UTF-8.\nIf you want to use other encodings, please convert them to UTF-8 before opening."
   },
   "menu": {
     "new": "New",
@@ -17,10 +18,12 @@
     "saveAs": "Save As",
     "find": "Find",
     "replace": "Replace",
+    "goToLine": "Go to Line",
+    "goToSymbol": "Go to Heading",
+    "showCommands": "Command List",
     "print": "Print",
     "settings": "Settings",
-    "theme": "Theme",
-    "statusBar": "Status Bar",
+    "theme": "Themes",
     "about": "About",
     "onyx": "Onyx",
     "dark": "Dark",
@@ -29,8 +32,9 @@
   "message": {
     "saved": "Saved",
     "fileAlreadyOpened": "File already opened!",
-    "fileUpdated": "File updated with external changes",
-    "fileModified": "File modified externally!"
+    "fileUpdated": "File reloaded",
+    "fileModified": "File modified externally!",
+    "ReloadButtonTooltip": "Reload File"
   },
   "editorMenu": {
     "cut": "Cut",
@@ -49,6 +53,7 @@
     "closeSaved": "Close Saved",
     "copyPath": "Copy Path",
     "openPath": "Open Path",
+    "reopenClosedTab": "Reopen Closed Tab",
     "openInNewWindow": "Open in New Window"
   },
   "settings": {
@@ -56,17 +61,19 @@
     "size": "Size",
     "fontDescription": "Word wrap may misalign with proportional fonts. Use a monospaced font if needed.",
     "layout": "Editor",
-    "highlightLine": "Highlight current line",
-    "lineNumbers": "Display line numbers",
-    "displayMinimap": "Display minimap",
-    "syntaxHighlight": "Syntax highlight",
+    "highlightLine": "Line Highlight",
+    "lineNumbers": "Line Numbers",
     "folding": "Folding",
+    "displayMinimap": "Minimap",
+    "syntaxHighlight": "Syntax Highlighting",
+    "statusBar": "Status Bar",
     "tabSize": "Tab Size",
     "language": "Language",
     "langDescription": "Contribute translations <a href=\"https://github.com/sheetau/monapad/blob/main/LANGUAGE.md\" target=\"_blank\">here</a>.",
     "customTheme": "Custom Theme",
     "openThemeFolder": "Open Theme Folder",
-    "customThemeDescription": "Apply custom themes by creating CSS files in this folder. Details <a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">here</a>."
+    "customThemeDescription": "Create a CSS file in this folder to add and apply custom themes from the theme menu. Details <a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">here</a>.",
+    "resetTooltip": "Reset Settings"
   },
   "modal": {
     "fileDrop": "Open with Monapad",
@@ -78,8 +85,8 @@
     "saveAll": "Save All & Exit",
     "discardAll": "Discard & Exit",
     "description": "Free and open source text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.",
-    "discordServer": "Discord Server:",
-    "creator": "Sheeta (Creator):",
-    "disclaimer": "Disclaimer:"
+    "discordServer": "Discord Server",
+    "creator": "Creator",
+    "disclaimer": "Disclaimer"
   }
 }

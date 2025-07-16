@@ -17,6 +17,7 @@ out/
 # VSCode
 .vscode/
 .history/
+_temp_backup/
 
 # Env files
 .env
@@ -24,3 +25,4 @@ out/
 
 # Webpack dev server artifacts
 *.cache
+

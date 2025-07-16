@@ -74,15 +74,25 @@
   --vscode-minimapSlider-activeBackground: #b6b6bf40;
 
   /* menu item background, button hover background */
-  --vscode-quickInputList-focusBackground: #1c212b;
   --vscode-button-hoverBackground: #1c212b;
   --vscode-list-hoverBackground: #1c212b;
   --vscode-list-activeSelectionBackground: #1c212b;
+  --vscode-list-highlightForeground: #e6b450; /* matched text */
   --vscode-menu-selectionBackground: #1c212b;
   --vscode-editorStickyScrollHover-background: #1c212b;
   --vscode-badge-background: #1c212b;
   --vscode-list-dropBackground: #1c212b;
   --vscode-editorActionList-focusForeground: #1c212b;
+
+  /* navigation widget */
+  --vscode-pickerGroup-foreground: #565b66; /* symbols() text */
+  --vscode-quickInputList-focusBackground: #1c212b; /* focus background */
+  --vscode-symbolIcon-classForeground: #e6b450; /* icon */
+  --vscode-symbolIcon-functionForeground: #aac92f; /* icon */
+  --vscode-symbolIcon-methodForeground: #b66c17; /* icon */
+  --vscode-quickInputList-focusIconForeground: #bfbdb6; /* focus icon */
+  --vscode-quickInput-foreground: #565b66; /* text */
+  --vscode-quickInputList-focusForeground: #bfbdb6; /* forcus text */
 
   /* input box */
   --vscode-input-foreground: #bfbdb6;

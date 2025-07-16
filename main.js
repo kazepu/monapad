@@ -166,7 +166,13 @@ function createNewWindowWithTab(parentWindow, tabData) {
 
 // app version
 ipcMain.handle("get-app-version", () => {
-  return app.getVersion();
+  return {
+    app: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+    v8: process.versions.v8,
+  };
 });
 
 // theme folder

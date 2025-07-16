@@ -15,7 +15,7 @@ Monapad is a modern text editor designed for efficient editing and readability, 
 - A clean, modern dark theme-only interface for distraction-free writing.
 - Smooth and responsive tab management, just like Chromium browser experience.
 - Supports many of the same keyboard shortcuts and functionalities as VSCode.
-- Built-in language and syntax highlighting rules:
+- Its own language and syntax highlighting includes:
   - Lines starting with `#`, `##`, and `###` are highlighted and can be folded by heading level.
   - Lines starting with `-# ` are shown subtly.
   - Lines starting with `- `, `* `, `+ ` and `Num. ` have their marker highlighted.
@@ -38,14 +38,18 @@ The name "Monapad" combines Monaco (the editor engine) and Notepad, reflecting i
 - Ctrl+T to create new tab.
 - Ctrl+Shift+T to reopen recently closed tab.
 - Ctrl+W to close current tab.
-- Ctrl+Tab to switch between tabs.
+- Ctrl(+Shift)+Tab to switch between tabs.
 - Ctrl+Num(1-9) to quickly switch to specified tab.
-- Ctrl+"+/-" or "mouse wheel" for zooming. Ctrl+"0" to reset zooming to default.
+- Ctrl+"+/-" or "mouse wheel" for zooming. Ctrl+0 to reset zooming to default.
 - Ctrl+Click to open link.
 - Ctrl+/ to toggle subtext on current line.
+- Ctrl+Sfhit+Num(1-3) to toggle heading 1-3 on current line.
+- Ctrl+G to go to a specific line.
+- Ctrl+Shift+O to go to a specific heading.
+- F1 to open command list.
 - F11 to toggle full screen.
 
-For more editor shortcuts, please refer to the sections **Basic editing**, **Search and replace**, and **Multi-cursor and selection** in [this link](https://code.visualstudio.com/shortcuts/keyboard-shortcuts-windows.pdf).
+For more editor shortcuts, check the command list or refer to the sections **Basic editing**, **Search and replace**, and **Multi-cursor and selection** in [this link](https://code.visualstudio.com/shortcuts/keyboard-shortcuts-windows.pdf).
 
 ## Downloads:
 
@@ -71,6 +75,8 @@ Click [here](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md) To see
 
 Feel free to review the source code since it is 100% open sourced.
 
+**More to read here: [[Privacy Policy](https://github.com/sheetau/monapad/blob/main/PRIVACY.md)]**
+
 ## Contributing:
 
 - [Submit your custome themes](https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md)
@@ -85,6 +91,10 @@ Feel free to review the source code since it is 100% open sourced.
 - [Electron Builder](https://github.com/electron-userland/electron-builder)
 - [Webpack](https://github.com/webpack/webpack)
 - [Monaco Editor](https://github.com/microsoft/monaco-editor)
+- [Visual Studio Code](https://github.com/microsoft/vscode)
+- [i18next](https://github.com/i18next/i18next)
+- [font-list](https://github.com/oldj/node-font-list)
+- [Choices.js](https://github.com/Choices-js/Choices)
 
 ## Stay tuned 📢:
 

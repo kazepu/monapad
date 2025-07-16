@@ -5,7 +5,8 @@
   "statusBar": {
     "line": "行",
     "col": "列",
-    "selection": "({{count}} 文字選択済み)"
+    "selection": "({{count}} 文字選択済み)",
+    "encodingTooltip": "このエディタはUTF-8のみをサポートしています。\n他の文字エンコーディングを使用する場合は、UTF-8に変換してから開いてください。"
   },
   "menu": {
     "new": "新規作成",
@@ -17,10 +18,12 @@
     "saveAs": "名前を付けて保存",
     "find": "検索",
     "replace": "置換",
+    "goToLine": "行に移動",
+    "goToSymbol": "見出しに移動",
+    "showCommands": "コマンド一覧",
     "print": "印刷",
     "settings": "設定",
     "theme": "テーマ",
-    "statusBar": "ステータスバー",
     "about": "バージョン情報",
     "onyx": "オニキス",
     "dark": "ダーク",
@@ -29,8 +32,9 @@
   "message": {
     "saved": "保存しました",
     "fileAlreadyOpened": "ファイルは既に開いています！",
-    "fileUpdated": "外部変更によりファイルが更新されました",
-    "fileModified": "ファイルが外部で変更されました！"
+    "fileUpdated": "ファイルを再読み込みしました",
+    "fileModified": "ファイルが外部で変更されました！",
+    "ReloadButtonTooltip": "ファイルを再読み込み"
   },
   "editorMenu": {
     "cut": "切り取り",
@@ -49,6 +53,7 @@
     "closeSaved": "保存済みを閉じる",
     "copyPath": "パスをコピー",
     "openPath": "パスを開く",
+    "reopenClosedTab": "閉じたタブを開く",
     "openInNewWindow": "新規ウィンドウで開く"
   },
   "settings": {
@@ -57,16 +62,18 @@
     "fontDescription": "非等幅フォントでは折り返しがずれる場合があります。気になる方は等幅フォントをご利用ください。",
     "layout": "エディタ",
     "highlightLine": "現在行をハイライト",
-    "lineNumbers": "行番号を表示",
-    "displayMinimap": "ミニマップを表示",
-    "syntaxHighlight": "シンタックスハイライト",
+    "lineNumbers": "行番号",
     "folding": "折りたたみ",
+    "displayMinimap": "ミニマップ",
+    "syntaxHighlight": "シンタックスハイライト",
+    "statusBar": "ステータスバー",
     "tabSize": "インデント幅",
     "language": "言語",
     "langDescription": "翻訳の貢献は<a href=\"https://github.com/sheetau/monapad/blob/main/LANGUAGE.md\" target=\"_blank\">こちら</a>。",
     "customTheme": "カスタムテーマ",
     "openThemeFolder": "テーマフォルダを開く",
-    "customThemeDescription": "CSSファイルをこのフォルダに作ることでカスタムテーマを適用できます。詳細は<a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">こちら</a>。"
+    "customThemeDescription": "このフォルダにCSSファイルを作成すると、テーマメニューにカスタムテーマとして表示され適用できるようになります。詳細は<a href=\"https://github.com/sheetau/monapad/blob/main/CUSTOMTHEME.md\" target=\"_blank\">こちら</a>。",
+    "resetTooltip": "設定をリセット"
   },
   "modal": {
     "fileDrop": "Monapadで開く",
@@ -78,8 +85,8 @@
     "saveAll": "すべて保存して終了",
     "discardAll": "破棄して終了",
     "description": "Sheetaが制作した、Visual Studio Codeと同じMonacoエディタを利用するフリーでオープンソースのテキストエディタ。",
-    "discordServer": "Discordサーバー:",
-    "creator": "Sheeta (開発者):",
-    "disclaimer": "免責事項:"
+    "discordServer": "Discordサーバー",
+    "creator": "開発者",
+    "disclaimer": "免責事項"
   }
 }

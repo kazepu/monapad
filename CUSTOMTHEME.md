@@ -100,7 +100,7 @@ Also, the `.marker-transparent` class is used to adjust the opacity of some synt
 ### Monaco Editor Theme Color Variables
 
 Use hex colors (6 or 8 digits), or variables that contain them.  
-Refer to the VS Code theme color tokens in this document:  
+Inspect the elements to find variables starting with `--vscode-` or Refer to the VS Code theme color tokens in this document:  
 https://code.visualstudio.com/api/references/theme-color#lists-and-trees
 
 For example, use `--vscode-editor-background` to theme the `editor.background` token, like:
