@@ -4,8 +4,10 @@ import "choices.js/public/assets/styles/choices.min.css";
 import "./custom-choices.css";
 import i18next from "i18next";
 
+const toolbar = document.getElementById("toolbar");
 const tabsContainer = document.getElementById("tabs-container");
 const tabs = document.getElementById("tabs");
+const windowControls = document.getElementById("window-controls");
 const editor = document.getElementById("editor");
 const addTabButton = document.getElementById("add-tab");
 const menuButton = document.getElementById("menu-button");
@@ -65,12 +67,27 @@ const about = document.getElementById("about");
 const fileDropBox = document.getElementById("file-drop-background");
 const fileDrop = document.getElementById("file-drop");
 
+// tab dragging
 let draggingTab = null;
+let draggingTabData = null;
 let dragStartX = 0;
 let originalX = 0;
 let startX = 0;
 let currentX = 0;
 let dragIndex = -1;
+let wasOnlyTab = false;
+let overlayWindowVisible = false;
+let windowBoundsCache = null;
+let dragStartClientPos = null;
+let cachedToolbarRect = null;
+let lastWindowCheck = 0;
+let externalCancelDragging = null;
+// flag indicates enableTabDragging is middle of mousedown event, in case mouseup triggered middle of it
+let isHandlingMouseDown = false;
+let deferredOnMouseUp = false;
+let deferredMouseUpEvent = null;
+let tabPendingDeferredMouseUp = null;
+
 let zoomLevel = 1;
 let currentTab = { content: "", selection: null, fontSize: persistentFontSize };
 let tabData = [];
@@ -111,6 +128,12 @@ let rightClickedTab = null;
 let currentWatcher = null;
 // watch css file used as current theme
 let currentWatchedCssFile = null;
+
+// get window id
+let myWindowId = null;
+window.electronAPI.onAssignWindowId((id) => {
+  myWindowId = id;
+});
 
 // app version
 window.electronAPI.getAppVersion().then((versions) => {
@@ -276,6 +299,7 @@ function updateMenuLabels() {
   document.getElementById("confirm-cancel-all").textContent = i18next.t("modal.cancel");
   // document.getElementById("description").textContent = i18next.t("modal.description");
   document.getElementById("discordServer").textContent = i18next.t("modal.discordServer");
+  document.getElementById("website").textContent = i18next.t("modal.website");
   document.getElementById("creator").textContent = i18next.t("modal.creator");
   document.getElementById("disclaimer-title").textContent = i18next.t("modal.disclaimer");
 }
@@ -400,7 +424,28 @@ monaco.languages.registerDocumentSymbolProvider("monapad", {
     const lines = model.getLinesContent();
     const symbols = [];
 
+    // code block range
+    const codeBlocks = [];
+    let codeBlockStart = null;
+    lines.forEach((line, i) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("```")) {
+        if (codeBlockStart === null) {
+          codeBlockStart = i;
+        } else {
+          codeBlocks.push({ start: codeBlockStart, end: i });
+          codeBlockStart = null;
+        }
+      }
+    });
+
+    function isInsideCodeBlock(lineNumber) {
+      return codeBlocks.some((block) => lineNumber >= block.start && lineNumber <= block.end);
+    }
+
     lines.forEach((line, lineNumber) => {
+      if (isInsideCodeBlock(lineNumber)) return;
+
       const trimmed = line.trim();
 
       let match, name, headingPrefix, kind;
@@ -1761,25 +1806,113 @@ function updateStatusBar() {
 
 // tab dragging
 function enableTabDragging(tab, data) {
-  tab.addEventListener("mousedown", (e) => {
-    if (e.button !== 0) return;
-    if (e.target.closest(".close")) return;
+  tab.addEventListener("mousedown", async (e) => {
+    if (e.button !== 0 || e.target.closest(".close") || draggingTab) return;
+    // console.log("📌mousedown: start");
+    isHandlingMouseDown = true;
+    tabPendingDeferredMouseUp = tab;
+    dragStartClientPos = { x: e.clientX, y: e.clientY };
     switchTab(data);
     draggingTab = tab;
+    // console.log("📌mousedown: draggingTab set");
+    draggingTabData = data;
     dragIndex = tabData.indexOf(data);
+    wasOnlyTab = tabData.length === 1;
     startX = e.clientX;
     currentX = 0;
     tab.style.transition = "none";
     tab.style.position = "relative";
+    windowBoundsCache = await window.electronAPI.getMyBounds();
+    cachedToolbarRect = toolbar.getBoundingClientRect();
+    externalCancelDragging = handleCancelDraggingByShortcut;
+    // console.log("📌mousedown: adding eventlistener...");
     document.addEventListener("mousemove", onMouseMove);
     document.addEventListener("mouseup", onMouseUp);
+    // console.log("📌mousedown: eventlistener added");
+    isHandlingMouseDown = false;
+
+    // defered: only process mouseup that occur while processing current tab
+    if (deferredOnMouseUp && tabPendingDeferredMouseUp === tab) {
+      console.log("📌deferred onMouseUp fired after mousedown end");
+      deferredOnMouseUp = false;
+      tabPendingDeferredMouseUp = null;
+      const e = deferredMouseUpEvent;
+      deferredMouseUpEvent = null;
+      onMouseUp(e);
+    }
   });
+
+  function shouldCheckWindow() {
+    const now = performance.now();
+    if (now - lastWindowCheck > 100) {
+      lastWindowCheck = now;
+      return true;
+    }
+    return false;
+  }
 
   function onMouseMove(e) {
     if (!draggingTab) return;
-    currentX = e.clientX - startX;
+
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    const toolbarRect = cachedToolbarRect;
+    const isOutsideToolbar =
+      mouseX < toolbarRect.left ||
+      mouseX > toolbarRect.right - windowControls.offsetWidth ||
+      mouseY < toolbarRect.top ||
+      mouseY > toolbarRect.bottom + toolbarRect.height / 2;
+
+    if (isOutsideToolbar) {
+      tabs.classList.remove("dragging");
+      draggingTab.style.opacity = "0.5";
+      overlayWindowVisible = true;
+      window.electronAPI.createCursorWindow();
+
+      if (shouldCheckWindow()) {
+        const isWarn = draggingTabData.isWarned;
+        window.electronAPI.getWindowIdAt({ x: e.screenX, y: e.screenY }).then(async (targetWindowId) => {
+          if (!windowBoundsCache) {
+            return;
+          }
+          const myBounds = windowBoundsCache;
+          const isInMyWindow =
+            e.screenX >= myBounds.x &&
+            e.screenX <= myBounds.x + myBounds.width &&
+            e.screenY >= myBounds.y &&
+            e.screenY <= myBounds.y + myBounds.height;
+
+          let isTargetMinimized = false;
+          if (targetWindowId) {
+            isTargetMinimized = await window.electronAPI.isWindowMinimized(targetWindowId);
+          }
+
+          let state = "";
+          if (isWarn) {
+            state = "forbidden";
+          } else if (targetWindowId && targetWindowId !== myWindowId && !isInMyWindow && !isTargetMinimized) {
+            state = "move";
+          } else if (wasOnlyTab) {
+            state = "forbidden";
+          } else {
+            state = "new";
+          }
+
+          window.electronAPI.setCursorWindowState(state);
+        });
+      }
+
+      window.electronAPI.moveCursorWindow(e.screenX, e.screenY);
+      return;
+    } else {
+      tabs.classList.add("dragging");
+      draggingTab.style.opacity = "1";
+      overlayWindowVisible = false;
+      window.electronAPI.destroyCursorWindow();
+    }
+
+    currentX = mouseX - startX;
     draggingTab.style.transform = `translateX(${currentX}px)`;
-    tabs.classList.add("dragging");
 
     const tabsArray = Array.from(tabs.children).filter((el) => el.classList.contains("tab"));
     const currentRect = draggingTab.getBoundingClientRect();
@@ -1791,7 +1924,6 @@ function enableTabDragging(tab, data) {
       const targetRect = targetTab.getBoundingClientRect();
       const targetCenter = targetRect.left + targetRect.width / 2;
 
-      // right drag
       if (currentX > 0 && currentRect.right > targetCenter && i > dragIndex) {
         const oldLeft = currentRect.left;
 
@@ -1810,9 +1942,7 @@ function enableTabDragging(tab, data) {
         startX = e.clientX - currentX;
 
         break;
-      }
-      // left drag
-      else if (currentX < 0 && currentRect.left < targetCenter && i < dragIndex) {
+      } else if (currentX < 0 && currentRect.left < targetCenter && i < dragIndex) {
         const oldLeft = currentRect.left;
 
         tabs.insertBefore(draggingTab, targetTab);
@@ -1834,22 +1964,218 @@ function enableTabDragging(tab, data) {
     }
   }
 
-  function onMouseUp() {
-    if (!draggingTab) return;
-    tabs.classList.remove("dragging");
+  async function onMouseUp(e) {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    // console.log("🗑️mouseup: eventlistener removed");
+
+    if (tabPendingDeferredMouseUp === tab) {
+      tabPendingDeferredMouseUp = null;
+      deferredOnMouseUp = false;
+      deferredMouseUpEvent = null;
+    }
+
+    if (!draggingTab || !e) {
+      console.warn("⚠️ onMouseUp called with invalid state", draggingTab, e);
+      dragStartClientPos = null;
+      externalCancelDragging = null;
+      return;
+    }
+
+    const isWarn = draggingTabData.isWarned;
+    const releasedTabData = tabData.find((t) => t.element === draggingTab);
+
     draggingTab.style.transition = "";
     draggingTab.style.transform = "";
     draggingTab.style.position = "";
     draggingTab.style.pointerEvents = "";
+    draggingTab.style.opacity = "1";
+    tabs.classList.remove("dragging");
+
+    if (overlayWindowVisible) {
+      overlayWindowVisible = false;
+      window.electronAPI.destroyCursorWindow();
+    }
+
     draggingTab = null;
+    draggingTabData = null;
+    cachedToolbarRect = null;
+    externalCancelDragging = null;
     dragIndex = -1;
+
+    if (isWarn || !releasedTabData || !windowBoundsCache) {
+      dragStartClientPos = null;
+      return;
+    }
+
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const isOutsideToolbar =
+      mouseX < toolbarRect.left ||
+      mouseX > toolbarRect.right - windowControls.offsetWidth ||
+      mouseY < toolbarRect.top ||
+      mouseY > toolbarRect.bottom + toolbarRect.height / 2;
+
+    const myBounds = windowBoundsCache;
+    const isInMyWindow =
+      e.screenX >= myBounds.x &&
+      e.screenX <= myBounds.x + myBounds.width &&
+      e.screenY >= myBounds.y &&
+      e.screenY <= myBounds.y + myBounds.height;
+
+    windowBoundsCache = null;
+
+    // get window id from cursor position
+    window.electronAPI
+      .getWindowIdAt({ x: e.screenX, y: e.screenY })
+      .then((targetWindowId) => {
+        if (targetWindowId && targetWindowId !== myWindowId && !isInMyWindow) {
+          // send tab to window on drop
+          const tabInfo = {
+            name: releasedTabData.name,
+            content: releasedTabData.model.getValue(),
+            path: releasedTabData.path,
+            isFileSaved: releasedTabData.isFileSaved,
+            originalContent: releasedTabData.originalContent,
+            fontSize: releasedTabData.fontSize,
+            wordWrap: releasedTabData.wordWrap,
+            isMarkdown: releasedTabData.isMarkdown,
+            hasReloadButton: releasedTabData.element?.classList.contains("has-reload-button"),
+          };
+          window.electronAPI.sendTabToWindow(targetWindowId, tabInfo).then(() => {
+            window.electronAPI.focusWindow(targetWindowId);
+          });
+
+          // 元ウィンドウから削除
+          removeTabAndAdjustUI(releasedTabData);
+
+          if (wasOnlyTab) {
+            attemptCloseWindow();
+          }
+        } else if (isOutsideToolbar) {
+          if (wasOnlyTab) return;
+          const position = dragStartClientPos
+            ? {
+                x: e.screenX - dragStartClientPos.x,
+                y: e.screenY - dragStartClientPos.y,
+              }
+            : { x: e.screenX, y: e.screenY };
+          openTabInNewWindow(releasedTabData, position);
+        }
+      })
+      .finally(() => {
+        dragStartClientPos = null;
+      });
+  }
+
+  // terminate dragging due to shortcut key pressing
+  function handleCancelDraggingByShortcut() {
+    // Prevent duplicate execution (function was already called once)
+    if (!externalCancelDragging) return;
+
     document.removeEventListener("mousemove", onMouseMove);
     document.removeEventListener("mouseup", onMouseUp);
+
+    if (!draggingTab) {
+      dragStartClientPos = null;
+      externalCancelDragging = null;
+      return;
+    }
+
+    draggingTab.style.transition = "";
+    draggingTab.style.transform = "";
+    draggingTab.style.position = "";
+    draggingTab.style.pointerEvents = "";
+    draggingTab.style.opacity = "1";
+    tabs.classList.remove("dragging");
+
+    if (overlayWindowVisible) {
+      overlayWindowVisible = false;
+      window.electronAPI.destroyCursorWindow();
+    }
+
+    draggingTab = null;
+    draggingTabData = null;
+    cachedToolbarRect = null;
+    dragStartClientPos = null;
+    externalCancelDragging = null;
+    dragIndex = -1;
+  }
+}
+
+document.addEventListener("mouseup", (e) => {
+  if (isHandlingMouseDown) {
+    console.log("🚩mouseup came during mousedown; deferring onMouseUp");
+    deferredOnMouseUp = true;
+    deferredMouseUpEvent = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      screenX: e.screenX,
+      screenY: e.screenY,
+      button: e.button,
+    };
+  }
+});
+
+async function openTabInNewWindow(targetTabData, position) {
+  if (!targetTabData) return;
+
+  const tabInfo = {
+    name: targetTabData.name,
+    content: targetTabData.model.getValue(),
+    path: targetTabData.path,
+    isFileSaved: targetTabData.isFileSaved,
+    originalContent: targetTabData.originalContent,
+    fontSize: targetTabData.fontSize,
+    wordWrap: targetTabData.wordWrap,
+    isMarkdown: targetTabData.isMarkdown,
+    hasReloadButton: targetTabData.element?.classList.contains("has-reload-button"),
+  };
+
+  await window.electronAPI.createNewWindowWithTab(tabInfo, position);
+  removeTabAndAdjustUI(targetTabData);
+}
+
+function removeTabAndAdjustUI(targetTabData) {
+  const index = tabData.indexOf(targetTabData);
+  if (index === -1) return;
+
+  tabs.removeChild(targetTabData.element);
+  tabData.splice(index, 1);
+
+  const isActive = targetTabData.element.classList.contains("active");
+
+  if (!isActive) {
+    // Update prev-active tab if necessary
+    const currentActive = tabData.find((t) => t.element.classList.contains("active"));
+    if (currentActive) {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("prev-active"));
+      const prev = currentActive.element.previousElementSibling;
+      if (prev && prev.classList.contains("tab")) {
+        prev.classList.add("prev-active");
+      }
+    }
+    return;
+  }
+
+  // Active tab was removed → switch or create
+  if (tabData.length) {
+    const newIndex = index === tabData.length ? Math.max(index - 1, 0) : index;
+    switchTab(tabData[newIndex]);
+    setTimeout(() => monacoEditor?.focus(), 0);
+  } else {
+    currentTab = null;
+    createTab();
+    fixedTabsWidth = null;
+    tabs.style.maxWidth = "";
+    switchTab(tabData[0]);
+    setTimeout(() => monacoEditor?.focus(), 0);
   }
 }
 
 // create tab
-function createTab(name, content = "", path = null) {
+function createTab(name, content = "", path = null, insertIndex = null) {
   if (!name) name = `${i18next.t("file.untitled")}.txt`;
 
   // reset tabs max width
@@ -1885,10 +2211,8 @@ function createTab(name, content = "", path = null) {
 
   tab.appendChild(nameSpan);
   tab.appendChild(close);
-  tabs.appendChild(tab);
 
   const model = monaco.editor.createModel(content, "monapad");
-
   const data = {
     name,
     content,
@@ -1899,8 +2223,17 @@ function createTab(name, content = "", path = null) {
     model: model,
     viewState: null,
     isMarkdown: false,
+    isWarned: false,
   };
-  tabData.push(data);
+
+  if (insertIndex !== null && insertIndex >= 0 && insertIndex < tabData.length) {
+    const referenceTab = tabData[insertIndex].element;
+    tabs.insertBefore(tab, referenceTab.nextSibling);
+    tabData.splice(insertIndex + 1, 0, data);
+  } else {
+    tabs.appendChild(tab);
+    tabData.push(data);
+  }
 
   close.onclick = async (e) => {
     e.stopPropagation();
@@ -1932,6 +2265,8 @@ function createTab(name, content = "", path = null) {
 
   // tab drag handler
   enableTabDragging(tab, data);
+
+  return data;
 }
 
 // close tab
@@ -2296,11 +2631,13 @@ window.electronAPI.onFileChanged((event, { filePath, eventType }) => {
 
   if (eventType === "rename") {
     // if file is not found
+    targetTab.isWarned = true;
     targetTab.element.querySelector(".name").classList.add("warn");
     reloadButton(targetTab, null, "remove");
     if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
   } else if (eventType === "change") {
     // if file is changed
+    targetTab.isWarned = false;
     targetTab.element.querySelector(".name").classList.remove("warn");
     handleFileChange(targetTab, filePath);
     if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
@@ -2315,18 +2652,18 @@ async function handleFileChange(targetTab, filePath) {
     content = null;
   }
 
-  const nameEl = targetTab.element.querySelector(".name");
-
   if (content === null) {
     // line-through name if file is not found. remove reload button
-    nameEl.classList.add("warn");
+    targetTab.isWarned = true;
+    targetTab.element.querySelector(".name").classList.add("warn");
     reloadButton(targetTab, null, "remove");
     if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
     return;
   }
 
   // remove line-through if file is found
-  nameEl.classList.remove("warn");
+  targetTab.isWarned = false;
+  targetTab.element.querySelector(".name").classList.remove("warn");
   if (tabContextMenu.style.display !== "none") updateTabContextMenuState(tabContextMenu, targetTab);
 
   if (targetTab.isFileSaved && (content === targetTab._lastExternalContent || content === targetTab.originalContent)) {
@@ -2452,7 +2789,8 @@ async function loadFileByPath(filePath) {
     }
   }
 
-  const newTab = createTab(filePath.split(/[/\\]/).pop(), content, filePath);
+  const activeIndex = tabData.findIndex((t) => t.element.classList.contains("active"));
+  const newTab = createTab(filePath.split(/[/\\]/).pop(), content, filePath, activeIndex);
   const newTabData = tabData[tabData.length - 1];
   newTabData.originalContent = content;
   newTabData._lastExternalContent = content;
@@ -2462,7 +2800,7 @@ async function loadFileByPath(filePath) {
   const newTabClose = newTabData.element.querySelector(".close");
   if (newTabClose) newTabClose.classList.remove("show-unsaved");
 
-  switchTab(tabData.at(-1));
+  switchTab(newTab);
   updateRecentFiles(filePath);
 }
 
@@ -2620,7 +2958,7 @@ async function saveFile() {
     return await saveAsFile();
   }
 
-  if (active.isFileSaved && !active.element.querySelector(".name")?.classList.contains("warn")) {
+  if (active.isFileSaved && !active.isWarned) {
     console.log("No changes to save.");
     return true;
   }
@@ -2750,19 +3088,11 @@ function updateTabContextMenuState(menu, tab) {
   const openInNewWindowBtn = menu.querySelector('[data-action="openInNewWindow"]');
 
   const hasPath = tab && tab.path;
-  const isWarned = tab?.element?.querySelector(".warn") !== null;
+  const isWarn = tab.isWarned;
 
-  if (copyPathBtn) {
-    copyPathBtn.classList.toggle("disabled", !hasPath || isWarned);
-  }
-
-  if (openPathBtn) {
-    openPathBtn.classList.toggle("disabled", !hasPath || isWarned);
-  }
-
-  if (openInNewWindowBtn) {
-    openInNewWindowBtn.classList.toggle("disabled", isWarned);
-  }
+  if (copyPathBtn) copyPathBtn.classList.toggle("disabled", !hasPath || isWarn);
+  if (openPathBtn) openPathBtn.classList.toggle("disabled", !hasPath || isWarn);
+  if (openInNewWindowBtn) openInNewWindowBtn.classList.toggle("disabled", isWarn || tabData.length === 1);
 }
 
 // Close multiple tabs one by one (close others, close to the right & close saved)
@@ -2776,60 +3106,6 @@ async function closeTabsSequentially(tabsToClose) {
       // If user cancelled, stop the process
       if (closed === "cancelled") {
         break;
-      }
-    }
-  }
-}
-
-async function openTabInNewWindow(targetTabData) {
-  if (!targetTabData) return;
-
-  const tabInfo = {
-    name: targetTabData.name,
-    content: targetTabData.model.getValue(),
-    path: targetTabData.path,
-    isFileSaved: targetTabData.isFileSaved,
-    originalContent: targetTabData.originalContent,
-    fontSize: targetTabData.fontSize,
-    wordWrap: targetTabData.wordWrap,
-    isMarkdown: targetTabData.isMarkdown,
-    hasReloadButton: targetTabData.element?.classList.contains("has-reload-button"),
-  };
-
-  // create new window, send tab info
-  await window.electronAPI.createNewWindowWithTab(tabInfo);
-
-  // remove tab from original window whether saved or not
-  const index = tabData.indexOf(targetTabData);
-  tabs.removeChild(targetTabData.element);
-  tabData = tabData.filter((t) => t !== targetTabData);
-
-  if (targetTabData.element.classList.contains("active")) {
-    if (tabData.length) {
-      const newIndex = index === tabData.length ? Math.max(index - 1, 0) : index;
-      switchTab(tabData[newIndex]);
-      setTimeout(() => monacoEditor?.focus(), 0);
-    } else {
-      currentTab = null;
-      createTab();
-
-      // reset max width when last tab is closed
-      fixedTabsWidth = null;
-      tabs.style.maxWidth = "";
-
-      switchTab(tabData[0]);
-      setTimeout(() => monacoEditor?.focus(), 0);
-    }
-  } else {
-    const currentActive = tabData.find((t) => t.element.classList.contains("active"));
-    if (currentActive) {
-      document.querySelectorAll(".tab").forEach((tab) => {
-        tab.classList.remove("prev-active");
-      });
-
-      const prev = currentActive.element.previousElementSibling;
-      if (prev && prev.classList.contains("tab")) {
-        prev.classList.add("prev-active");
       }
     }
   }
@@ -3115,11 +3391,13 @@ window.addEventListener("keydown", async (e) => {
   }
   // Ctrl + Shift + T
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === "KeyT") {
+    if (externalCancelDragging) externalCancelDragging();
     e.preventDefault();
     await reopenRecentlyClosedFile();
   }
   // Ctrl + T
   else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.code === "KeyT") {
+    if (externalCancelDragging) externalCancelDragging();
     e.preventDefault();
     createTab();
     switchTab(tabData.at(-1));
@@ -3131,6 +3409,7 @@ window.addEventListener("keydown", async (e) => {
   }
   // Ctrl + W
   if ((e.ctrlKey || e.metaKey) && e.code === "KeyW") {
+    if (externalCancelDragging) externalCancelDragging();
     e.preventDefault();
     const data = currentTab;
     if (!data) return;
@@ -3139,6 +3418,7 @@ window.addEventListener("keydown", async (e) => {
 
   // Ctrl + 1-9
   if ((e.ctrlKey || e.metaKey) && /^Digit[1-9]$/.test(e.code)) {
+    if (externalCancelDragging) externalCancelDragging();
     e.preventDefault();
     const index = parseInt(e.code.slice(-1), 10) - 1;
     if (tabData[index] && tabData[index] !== currentTab) {
@@ -3148,6 +3428,7 @@ window.addEventListener("keydown", async (e) => {
 
   // Ctrl + Tab (+ Shift)
   if ((e.ctrlKey || e.metaKey) && e.code === "Tab") {
+    if (externalCancelDragging) externalCancelDragging();
     e.preventDefault();
     if (!currentTab) return;
 

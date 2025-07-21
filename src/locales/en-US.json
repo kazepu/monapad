@@ -86,6 +86,7 @@
     "discardAll": "Discard & Exit",
     "description": "Free and open source text editor using the same Monaco Editor as Visual Studio Code, created by Sheeta.",
     "discordServer": "Discord Server",
+    "website": "Website",
     "creator": "Creator",
     "disclaimer": "Disclaimer"
   }

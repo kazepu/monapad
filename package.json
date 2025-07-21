@@ -1,23 +1,25 @@
 {
   "name": "monapad",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "notepad app",
-  "main": "main.js",
+  "main": "src/main.js",
   "build": {
     "appId": "com.sheetau.monapad",
     "productName": "Monapad",
     "win": {
       "target": "nsis",
-      "icon": "icon/favicon.ico"
+      "icon": "src/icon/favicon.ico"
     },
     "files": [
-      "main.js",
-      "preload.js",
-      "font/**/*",
-      "icon/**/*",
-      "index.html",
-      "build/**/*",
-      "locales/**/*.json"
+      "src/build/**/*",
+      "src/font/**/*",
+      "src/icon/**/*",
+      "src/locales/**/*.json",
+      "src/main.js",
+      "src/preload.js",
+      "src/preload-cursor.js",
+      "src/index.html",
+      "src/cursor.html"
     ],
     "publish": [
       {
@@ -34,187 +36,187 @@
       {
         "ext": "asp",
         "name": "Active Server Pages",
-        "icon": "icon/asp.ico"
+        "icon": "src/icon/asp.ico"
       },
       {
         "ext": "ass",
         "name": "Advanced SubStation Alpha",
-        "icon": "icon/ass.ico"
+        "icon": "src/icon/ass.ico"
       },
       {
         "ext": "bash",
         "name": "Bash Script",
-        "icon": "icon/bash.ico"
+        "icon": "src/icon/bash.ico"
       },
       {
         "ext": "bib",
         "name": "BibTeX",
-        "icon": "icon/bib.ico"
+        "icon": "src/icon/bib.ico"
       },
       {
         "ext": "c",
         "name": "C Source",
-        "icon": "icon/c.ico"
+        "icon": "src/icon/c.ico"
       },
       {
         "ext": "cfg",
         "name": "Configuration File",
-        "icon": "icon/cfg.ico"
+        "icon": "src/icon/cfg.ico"
       },
       {
         "ext": "cpp",
         "name": "C++ Source",
-        "icon": "icon/cpp.ico"
+        "icon": "src/icon/cpp.ico"
       },
       {
         "ext": "cs",
         "name": "C# Source",
-        "icon": "icon/cs.ico"
+        "icon": "src/icon/cs.ico"
       },
       {
         "ext": "css",
         "name": "Cascading Style Sheets",
-        "icon": "icon/css.ico"
+        "icon": "src/icon/css.ico"
       },
       {
         "ext": "h",
         "name": "C/C++ Header",
-        "icon": "icon/h.ico"
+        "icon": "src/icon/h.ico"
       },
       {
         "ext": "html",
         "name": "HTML Document",
-        "icon": "icon/html.ico"
+        "icon": "src/icon/html.ico"
       },
       {
         "ext": "ini",
         "name": "INI Configuration",
-        "icon": "icon/ini.ico"
+        "icon": "src/icon/ini.ico"
       },
       {
         "ext": "java",
         "name": "Java Source",
-        "icon": "icon/java.ico"
+        "icon": "src/icon/java.ico"
       },
       {
         "ext": "js",
         "name": "JavaScript",
-        "icon": "icon/js.ico"
+        "icon": "src/icon/js.ico"
       },
       {
         "ext": "json",
         "name": "JSON File",
-        "icon": "icon/json.ico"
+        "icon": "src/icon/json.ico"
       },
       {
         "ext": "jsp",
         "name": "JavaServer Pages",
-        "icon": "icon/jsp.ico"
+        "icon": "src/icon/jsp.ico"
       },
       {
         "ext": "log",
         "name": "Log File",
-        "icon": "icon/log.ico"
+        "icon": "src/icon/log.ico"
       },
       {
         "ext": "md",
         "name": "Markdown",
-        "icon": "icon/md.ico"
+        "icon": "src/icon/md.ico"
       },
       {
         "ext": "perl",
         "name": "Perl Script",
-        "icon": "icon/perl.ico"
+        "icon": "src/icon/perl.ico"
       },
       {
         "ext": "php",
         "name": "PHP Script",
-        "icon": "icon/php.ico"
+        "icon": "src/icon/php.ico"
       },
       {
         "ext": "py",
         "name": "Python Script",
-        "icon": "icon/py.ico"
+        "icon": "src/icon/py.ico"
       },
       {
         "ext": "rb",
         "name": "Ruby Script",
-        "icon": "icon/rb.ico"
+        "icon": "src/icon/rb.ico"
       },
       {
         "ext": "rc",
         "name": "Resource Script",
-        "icon": "icon/rc.ico"
+        "icon": "src/icon/rc.ico"
       },
       {
         "ext": "sh",
         "name": "Shell Script",
-        "icon": "icon/sh.ico"
+        "icon": "src/icon/sh.ico"
       },
       {
         "ext": "sql",
         "name": "SQL Script",
-        "icon": "icon/sql.ico"
+        "icon": "src/icon/sql.ico"
       },
       {
         "ext": "srt",
         "name": "SubRip Subtitle",
-        "icon": "icon/srt.ico"
+        "icon": "src/icon/srt.ico"
       },
       {
         "ext": "ssa",
         "name": "SubStation Alpha Subtitle",
-        "icon": "icon/ssa.ico"
+        "icon": "src/icon/ssa.ico"
       },
       {
         "ext": "txt",
         "name": "Text Document",
-        "icon": "icon/txt.ico"
+        "icon": "src/icon/txt.ico"
       },
       {
         "ext": "vb",
         "name": "Visual Basic",
-        "icon": "icon/vb.ico"
+        "icon": "src/icon/vb.ico"
       },
       {
         "ext": "vue",
         "name": "Vue Component",
-        "icon": "icon/vue.ico"
+        "icon": "src/icon/vue.ico"
       },
       {
         "ext": "xml",
         "name": "XML File",
-        "icon": "icon/xml.ico"
+        "icon": "src/icon/xml.ico"
       },
       {
         "ext": "yml",
         "name": "YAML File",
-        "icon": "icon/yml.ico"
+        "icon": "src/icon/yml.ico"
       },
       {
         "ext": "ps1",
         "name": "PowerShell Script",
-        "icon": "icon/file.ico"
+        "icon": "src/icon/file.ico"
       },
       {
         "ext": "env",
         "name": "Environment File",
-        "icon": "icon/file.ico"
+        "icon": "src/icon/file.ico"
       },
       {
         "ext": "diff",
         "name": "Diff File",
-        "icon": "icon/file.ico"
+        "icon": "src/icon/file.ico"
       },
       {
         "ext": "go",
         "name": "Go Source",
-        "icon": "icon/file.ico"
+        "icon": "src/icon/file.ico"
       },
       {
         "ext": "lua",
         "name": "Lua Script",
-        "icon": "icon/file.ico"
+        "icon": "src/icon/file.ico"
       }
     ]
   },
@@ -244,7 +246,7 @@
   "dependencies": {
     "@codingame/monaco-vscode-api": "^18.2.0",
     "choices.js": "^11.1.0",
-    "electron-log": "^5.4.0",
+    "electron-log": "^5.4.1",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "font-list": "^1.5.1",

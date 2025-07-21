@@ -185,6 +185,7 @@
       }
       .monaco-editor .line-numbers {
         font-family: "Consolas", "Courier New", monospace !important;
+        user-select: none;
       }
       /* editor scroll shadow */
       .monaco-editor .scroll-decoration {
@@ -302,10 +303,11 @@
         z-index: 9998;
         width: 260px;
         padding: 5px 0;
-        max-height: calc(100vh - 80px);
+        max-height: calc(100vh - 70px);
         overflow-y: auto;
         border: solid 1px var(--color3);
         user-select: none;
+        box-sizing: border-box;
       }
       #menu button {
         position: relative;
@@ -340,7 +342,7 @@
       }
       #menu button .label {
         display: inline-block;
-        width: 57%;
+        width: 55%;
       }
       .scrollable::-webkit-scrollbar {
         width: 10px;
@@ -1775,6 +1777,8 @@
             <p style="margin-top: 12px" id="version-detail-text"></p>
             <p>
               <span id="creator">Creator</span>: <a href="https://linktr.ee/sheetau" target="_blank">Sheeta</a><br />
+              <span id="website">Website</span>:
+              <a href="https://sheetau.github.io/monapad/" target="_blank">https://sheetau.github.io/monapad/</a><br />
               GitHub: <a href="https://github.com/sheetau/monapad" target="_blank">https://github.com/sheetau/monapad</a
               ><br />
               <span id="discordServer">Server</span>:

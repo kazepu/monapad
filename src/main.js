@@ -14,6 +14,7 @@ const gotTheLock = app.requestSingleInstanceLock();
 
 let mainWindow = null;
 let filePathToOpen = null;
+let cursorWindow = null;
 
 fs.readdirSync(logDir).forEach((file) => {
   if (file.startsWith("main.log.old")) {
@@ -44,7 +45,7 @@ function createWindow() {
     icon: path.join(__dirname, "icon/favicon.ico"),
   });
 
-  mainWindow.loadFile("index.html");
+  mainWindow.loadFile(path.join(__dirname, "index.html"));
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
@@ -84,11 +85,14 @@ function createWindow() {
   });
 }
 
-function createNewWindow(parentWindow) {
+function createNewWindow(parentWindow, position) {
   const windowBounds = store.get("windowBounds") || { width: 800, height: 600 };
 
   let x, y;
-  if (parentWindow) {
+  if (position && typeof position.x === "number" && typeof position.y === "number") {
+    x = position.x;
+    y = position.y;
+  } else if (parentWindow) {
     const parentBounds = parentWindow.getBounds();
     x = parentBounds.x + 30;
     y = parentBounds.y + 30;
@@ -114,7 +118,7 @@ function createNewWindow(parentWindow) {
     icon: path.join(__dirname, "icon/favicon.ico"),
   });
 
-  win.loadFile("index.html");
+  win.loadFile(path.join(__dirname, "index.html"));
 
   win.once("ready-to-show", () => {
     win.show();
@@ -152,11 +156,15 @@ function createNewWindow(parentWindow) {
     }
   });
 
+  win.webContents.once("did-finish-load", () => {
+    win.webContents.send("assign-window-id", win.id);
+  });
+
   return win;
 }
 
-function createNewWindowWithTab(parentWindow, tabData) {
-  const newWindow = createNewWindow(parentWindow);
+function createNewWindowWithTab(parentWindow, tabData, position) {
+  const newWindow = createNewWindow(parentWindow, position);
 
   // send tab data when new window is ready
   newWindow.webContents.once("did-finish-load", () => {
@@ -239,9 +247,95 @@ ipcMain.handle("window:createNew", (event) => {
   createNewWindow(parentWindow);
 });
 
-ipcMain.handle("window:createNewWithTab", (event, tabData) => {
+// open tab in new window
+ipcMain.handle("window:createNewWithTab", (event, tabData, position) => {
+  // use position if exists
   const parentWindow = BrowserWindow.fromWebContents(event.sender);
-  createNewWindowWithTab(parentWindow, tabData);
+  return createNewWindowWithTab(parentWindow, tabData, position);
+});
+
+// get window id from dimention
+ipcMain.handle("window:getIdAt", (_, point) => {
+  const win = BrowserWindow.getAllWindows().find(
+    (w) =>
+      w.getBounds() &&
+      w.getBounds().x <= point.x &&
+      w.getBounds().x + w.getBounds().width >= point.x &&
+      w.getBounds().y <= point.y &&
+      w.getBounds().y + w.getBounds().height >= point.y
+  );
+  return win?.id || null;
+});
+
+// get if target window is minimized or not
+ipcMain.handle("isWindowMinimized", (event, windowId) => {
+  const win = BrowserWindow.fromId(windowId);
+  if (!win) return false;
+  return win.isMinimized();
+});
+
+// send tab to different window
+ipcMain.handle("tab:sendToWindow", (event, targetWindowId, tabData) => {
+  const targetWin = BrowserWindow.fromId(targetWindowId);
+  if (targetWin && !targetWin.isDestroyed()) {
+    targetWin.webContents.send("load-tab-data", tabData);
+  }
+});
+
+// focus window after tab is sent
+ipcMain.handle("focus-window", (event, windowId) => {
+  const win = BrowserWindow.fromId(windowId);
+  if (win) {
+    win.focus();
+  }
+});
+
+// get window bounds
+ipcMain.handle("window:getMyBounds", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win?.getBounds();
+});
+
+// small window when dragging tab outside toolbar
+ipcMain.on("createCursorWindow", () => {
+  if (cursorWindow) return;
+
+  cursorWindow = new BrowserWindow({
+    width: 23,
+    height: 23,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    show: false,
+    hasShadow: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    focusable: false,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload-cursor.js"),
+    },
+  });
+  // cursorWindow.webContents.openDevTools({ mode: "detach" });
+  cursorWindow.loadFile(path.join(__dirname, "cursor.html"));
+});
+ipcMain.on("moveCursorWindow", (e, pos) => {
+  if (!cursorWindow) return;
+  cursorWindow.setBounds({ x: pos.x + 12, y: pos.y + 12, width: 23, height: 23 });
+  if (!cursorWindow.isVisible()) cursorWindow.showInactive();
+});
+ipcMain.on("destroyCursorWindow", () => {
+  if (cursorWindow) {
+    cursorWindow.close();
+    cursorWindow = null;
+  }
+});
+ipcMain.on("setCursorWindowState", (event, state) => {
+  if (cursorWindow && !cursorWindow.isDestroyed()) {
+    cursorWindow.webContents.send("update-state", state);
+  }
 });
 
 ipcMain.handle("dialog:openFile", async () => {
@@ -481,6 +575,7 @@ if (!gotTheLock) {
     filePathToOpen = getFilePathFromArgv(process.argv);
 
     mainWindow.webContents.once("did-finish-load", () => {
+      mainWindow.webContents.send("assign-window-id", mainWindow.id);
       if (filePathToOpen) {
         log.info("Sending open-file event to renderer");
         mainWindow.webContents.send("open-file", filePathToOpen);
@@ -490,7 +585,7 @@ if (!gotTheLock) {
 
     // Updater
     if (autoUpdater) {
-      autoUpdater.checkForUpdatesAndNotify();
+      autoUpdater.checkForUpdates();
 
       autoUpdater.on("update-downloaded", async () => {
         const { response } = await dialog.showMessageBox(mainWindow, {
@@ -529,6 +624,7 @@ if (!gotTheLock) {
       app.whenReady().then(() => {
         createWindow();
         mainWindow.webContents.once("did-finish-load", () => {
+          mainWindow.webContents.send("assign-window-id", mainWindow.id);
           mainWindow.webContents.send("open-file", path);
         });
       });

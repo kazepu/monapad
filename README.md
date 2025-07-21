@@ -1,16 +1,16 @@
 <p align="center">
-  <img width="128" align="center" src="icon/favicon.ico">
+  <img width="128" align="center" src="src/icon/favicon.ico">
 </p>
 <h1 align="center">
   Monapad
 </h1>
 <p align="center">
-  A modern text editor that uses the same Monaco Editor as VSCode, offering a dark theme, tab support, and lightweight highlight features.
+  The text editor that thinks like a code editor
 </p>
 
 ## Features:
 
-Monapad is a modern text editor designed for efficient editing and readability, built on the Monaco Editor — the same core editor used in Visual Studio Code. Its key features include:
+With the same core editor used in VSCode and its own language designed for text editing, Monapad brings code editor-level efficiency and readability to your everyday writing. Its key features include:
 
 - A clean, modern dark theme-only interface for distraction-free writing.
 - Smooth and responsive tab management, just like Chromium browser experience.
@@ -53,7 +53,7 @@ For more editor shortcuts, check the command list or refer to the sections **Bas
 
 ## Downloads:
 
-Go to [Monapad Releases](https://github.com/sheetau/monapad/releases) and download the latest version of **Monapad-Setup-x.x.x.exe**.
+Download [latest version](https://github.com/sheetau/monapad/releases/latest) of **Monapad-Setup-x.x.x.exe**.
 
 > ⚠️ Since this app is not code-signed yet, Windows SmartScreen may show a warning when launching the installer, especially while the download count is still low.
 > If you see the warning, click “More info” and then “Run anyway” to proceed with the installation.
@@ -96,6 +96,6 @@ Feel free to review the source code since it is 100% open sourced.
 - [font-list](https://github.com/oldj/node-font-list)
 - [Choices.js](https://github.com/Choices-js/Choices)
 
-## Stay tuned 📢:
+## Stay tuned:
 
 [Sheeta's Discord Server](https://discord.gg/2dXs5HwXuW)

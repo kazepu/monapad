@@ -86,6 +86,7 @@
     "discardAll": "破棄して終了",
     "description": "Sheetaが制作した、Visual Studio Codeと同じMonacoエディタを利用するフリーでオープンソースのテキストエディタ。",
     "discordServer": "Discordサーバー",
+    "website": "公式サイト",
     "creator": "開発者",
     "disclaimer": "免責事項"
   }

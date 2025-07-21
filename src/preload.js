@@ -1,5 +1,4 @@
 const { contextBridge, ipcRenderer, webUtils, shell } = require("electron");
-const fs = require("fs");
 const log = require("electron-log");
 
 contextBridge.exposeInMainWorld("electronAPI", {
@@ -13,8 +12,31 @@ contextBridge.exposeInMainWorld("electronAPI", {
   readFile: (filePath) => ipcRenderer.invoke("file:read", filePath),
   showMessageBox: (options) => ipcRenderer.invoke("show-message-box", options),
   createNewWindow: () => ipcRenderer.invoke("window:createNew"),
-  createNewWindowWithTab: (tabData) => ipcRenderer.invoke("window:createNewWithTab", tabData),
+
+  // === move tab between windows ===
+  // open tab in new window
+  createNewWindowWithTab: (tabData, position) => ipcRenderer.invoke("window:createNewWithTab", tabData, position),
+  // receive tab data on new window
   onLoadTabData: (callback) => ipcRenderer.on("load-tab-data", (event, tabData) => callback(tabData)),
+  // assign each window id
+  onAssignWindowId: (callback) => ipcRenderer.on("assign-window-id", (_, id) => callback(id)),
+  // get window id
+  getWindowIdAt: (point) => ipcRenderer.invoke("window:getIdAt", point),
+  // get window bounds
+  getMyBounds: () => ipcRenderer.invoke("window:getMyBounds"),
+  // get if window is minimized or not
+  isWindowMinimized: (windowId) => ipcRenderer.invoke("isWindowMinimized", windowId),
+  // send tab to different window
+  sendTabToWindow: (windowId, tabData) => ipcRenderer.invoke("tab:sendToWindow", windowId, tabData),
+  // focus window after tab is sent
+  focusWindow: (windowId) => ipcRenderer.invoke("focus-window", windowId),
+  // small window when dragging tab outside toolbar
+  createCursorWindow: () => ipcRenderer.send("createCursorWindow"),
+  moveCursorWindow: (x, y) => ipcRenderer.send("moveCursorWindow", { x, y }),
+  destroyCursorWindow: () => ipcRenderer.send("destroyCursorWindow"),
+  // receive change cursor window text command
+  setCursorWindowState: (state) => ipcRenderer.send("setCursorWindowState", state),
+
   fileExists: (filePath) => ipcRenderer.invoke("file:exists", filePath),
   getPathForFile: (file) => webUtils.getPathForFile(file),
   openPath: (path) => ipcRenderer.invoke("open-path", path),
